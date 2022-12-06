@@ -11,8 +11,6 @@ import org.drasyl.node.event.NodeOnlineEvent;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 
-import static org.drasyl.util.RandomUtil.randomString;
-
 /**
  * Starts a {@link DrasylNode} which sends one message to given address and
  * echoes back any received message to
@@ -22,12 +20,11 @@ import static org.drasyl.util.RandomUtil.randomString;
  * @see EchoServerNode
  */
 @SuppressWarnings({ "java:S106", "java:S112", "java:S125", "java:S126", "java:S2096" })
-public class EchoClient extends DrasylNode {
-    private static final String IDENTITY = System.getProperty("identity", "echo-client.identity");
-    private static final int SIZE = Integer.parseInt(System.getProperty("size", "256"));
-    final CompletableFuture<Void> online = new CompletableFuture<>();
+public class EchoClientCopy extends DrasylNode {
+    private static final String IDENTITY = System.getProperty("identity", "echo-client-copy.identity");
+    private final CompletableFuture<Void> online = new CompletableFuture<>();
 
-    protected EchoClient(final DrasylConfig config) throws DrasylException {
+    protected EchoClientCopy(final DrasylConfig config) throws DrasylException {
         super(config);
     }
 
@@ -46,13 +43,6 @@ public class EchoClient extends DrasylNode {
     }
 
     public static void main(final String[] args) throws DrasylException {
-        String[] argss = new String[1];
-        argss[0] = "049a08e55f14fdd6485954cf474eb0c5bb03298e7b3a567ba62887214c9532d2";
-        if (argss.length != 1) {
-            System.err.println("Please provide EchoServer address as first argument.");
-            System.exit(1);
-        }
-        final String recipient = argss[0];
 
         final DrasylConfig config = DrasylConfig.newBuilder()
                 .identityPath(Path.of(IDENTITY))
@@ -68,13 +58,6 @@ public class EchoClient extends DrasylNode {
         node.online.join();
         System.out.println("EchoClient started");
         System.out.println("EchoServer listening on address " + node.identity().getAddress());
-
-        final String payload = randomString(SIZE);
-
-        System.out.println("Send `" + payload + "` to `" + recipient + "`");
-        node.send(recipient, payload).exceptionally(e -> {
-            throw new RuntimeException("Unable to process message.", e);
-        });
 
         while (true) {
 
