@@ -29,7 +29,15 @@
     <groupId>org.drasyl</groupId>
     <artifactId>drasyl-node</artifactId>
     <version>0.9.0</version>
+        </dependency>
+
+<!-- https://mvnrepository.com/artifact/com.microsoft.onnxruntime/onnxruntime -->
+<dependency>
+    <groupId>com.microsoft.onnxruntime</groupId>
+    <artifactId>onnxruntime</artifactId>
+    <version>1.13.1</version>
 </dependency>
+
   </dependencies>
 
   <build>

@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.simedge.protocols.BrokerProtocol;
 
 public class ClientThread extends Thread {
-    String hostname = "localhost";
+    String hostname = "134.155.108.108";
     int port = 12345;
     BufferedReader reader;
     PrintWriter writer;
