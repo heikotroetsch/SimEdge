@@ -29,6 +29,7 @@ public class PeerConnection extends DrasylNode {
             // .remoteMessageArmApplicationEnabled(false)
             // reliable
             .remoteMessageArqEnabled(false)
+
             .build();
     final CompletableFuture<Void> online = new CompletableFuture<>();
 

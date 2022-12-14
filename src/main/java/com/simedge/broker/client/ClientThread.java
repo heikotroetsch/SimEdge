@@ -60,7 +60,6 @@ public class ClientThread extends Thread {
                     System.out.println("message type: " + messageType + " content: " + content);
                     // handle message
                     handleMessage(messageType, content);
-
                 }
 
                 // if write queue is filled write message
@@ -69,6 +68,7 @@ public class ClientThread extends Thread {
                     String message = messageQueue.poll();
                     writer.write(message);
                     writer.flush();
+
                     System.out.println("message sent: " + message);
                 }
 
