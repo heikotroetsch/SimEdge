@@ -103,7 +103,7 @@ public class ONNXRuntime {
             OnnxTensor input_tensor = OnnxTensor.createTensor(runtime.env, data, new long[] { 1, 4 });
             Map<String, OnnxTensor> dense_input = Map.of("dense_input", input_tensor);
 
-            // reduction index
+            // reduction index index * 3 + xyz
             int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
                     1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
                     1742, 2139, 2227, 2487, 2514, 2547, 2586, 2619, 2824, 2861, 3148,
