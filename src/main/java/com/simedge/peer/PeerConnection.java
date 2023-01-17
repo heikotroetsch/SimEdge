@@ -38,12 +38,26 @@ public class PeerConnection extends DrasylNode {
         this.initialize();
     }
 
+    void initialize() throws DrasylException {
+
+        this.start().toCompletableFuture().join();
+
+        // CLIENT CONNECTIONS
+        this.online.join();
+        System.out.println("PeerConnection started");
+        System.out.println("PeerConnection listening on address " + this.identity().getAddress());
+
+    }
+
     @Override
     public void onEvent(final @NonNull Event event) {
         // hier keine Blokierenden sachen weil während dessn empfängt man keine Messages
         if (event instanceof NodeOnlineEvent) {
             online.complete(null);
         } else if (event instanceof MessageEvent) {
+
+            ((MessageEvent) event).getPayload();
+
             System.out.println("Got `" + ((MessageEvent) event).getPayload() + "` from `"
                     + ((MessageEvent) event).getSender() + "`");
             send(((MessageEvent) event).getSender(), ((MessageEvent) event).getPayload()).exceptionally(e -> {
@@ -52,19 +66,14 @@ public class PeerConnection extends DrasylNode {
         }
     }
 
-    void initialize() throws DrasylException {
-
-        this.start().toCompletableFuture().join();
-
-        // CLIENT CONNECTIONS
-        this.online.join();
-        System.out.println("PeerConnection started");
-        System.out.println(
-                "PeerConnection listening on address " + this.identity().getAddress());
-
+    public void sendMessage(String recipient_identity, String payload) {
+        System.out.println("Send `" + payload + "` to `" + recipient_identity + "`");
+        this.send(recipient_identity, payload).exceptionally(e -> {
+            throw new RuntimeException("Unable to process message.", e);
+        });
     }
 
-    public void sendMessage(String recipient_identity, String payload) {
+    public void sendMessage(String recipient_identity, Object payload) {
         System.out.println("Send `" + payload + "` to `" + recipient_identity + "`");
         this.send(recipient_identity, payload).exceptionally(e -> {
             throw new RuntimeException("Unable to process message.", e);

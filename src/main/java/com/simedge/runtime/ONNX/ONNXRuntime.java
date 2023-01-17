@@ -5,10 +5,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
@@ -20,26 +19,14 @@ import org.apache.commons.io.FileUtils;
 public class ONNXRuntime {
 
     public OrtEnvironment env = OrtEnvironment.getEnvironment();
-    public LinkedList<OrtSession> sessions = new LinkedList<OrtSession>();
+    public OrtSession session;
 
     public ONNXRuntime(String modelPath) throws OrtException {
-        sessions.add(env.createSession(modelPath, new OrtSession.SessionOptions()));
+        session = env.createSession(modelPath, new OrtSession.SessionOptions());
     }
 
     public ONNXRuntime(byte[] model) throws OrtException {
-        sessions.add(env.createSession(model, new OrtSession.SessionOptions()));
-    }
-
-    /**
-     * 
-     * @param models takes a queue of models as byte arrays and adds them to the
-     *               sessions that will be executed after each other
-     * @throws OrtException
-     */
-    public ONNXRuntime(Queue<byte[]> models) throws OrtException {
-        for (byte[] model : models) {
-            sessions.add(env.createSession(model, new OrtSession.SessionOptions()));
-        }
+        session = env.createSession(model, new OrtSession.SessionOptions());
     }
 
     /**
@@ -49,25 +36,24 @@ public class ONNXRuntime {
      *         Returns null if something went wrong.
      * @throws OrtException
      */
-    Map<String, OnnxTensor> execute(Map<String, OnnxTensor> dense_input, OrtSession session) throws OrtException {
+    public Map<String, ByteBuffer> execute(Map<String, OnnxTensor> dense_input)
+            throws OrtException {
 
         long start = System.currentTimeMillis();
         try (Result results = session.run(dense_input)) {
             System.out.println("Onnx took: " + (System.currentTimeMillis() - start) + "ms");
-            Map<String, OnnxTensor> dense_output = new HashMap<String, OnnxTensor>();
+            Map<String, ByteBuffer> dense_output = new HashMap<String, ByteBuffer>();
 
             // put the results in a reusable map of OnnxTensors.
-            for (var result : results) {
-                System.out.println(((OnnxTensor) result.getValue()).getInfo());
-                System.out.println(session.getInputInfo());
-                if (sessions.lastIndexOf(session) == sessions.size() - 1) {
-                    dense_output.put(result.getKey(), ((OnnxTensor) result.getValue()));
-                } else {
-                    // TODO get right input name
-                    dense_output.put("input_1", OnnxTensor.createTensor(env,
-                            ((OnnxTensor) result.getValue()).getFloatBuffer(), new long[] { 1, 5 }));
 
-                }
+            for (var result : results) {
+                var outputTensor = (OnnxTensor) result.getValue();
+                // TODO return results as array of byte arrays or buffer
+
+                System.out.println(session.getInputInfo());
+                System.out.println(outputTensor.getInfo());
+
+                dense_output.put(result.getKey(), outputTensor.getByteBuffer());
 
             }
             return dense_output;
@@ -75,32 +61,16 @@ public class ONNXRuntime {
 
     }
 
-    Map<String, OnnxTensor> executeAll(Map<String, OnnxTensor> dense_input) throws OrtException {
-        for (OrtSession session : sessions) {
-            dense_input = execute(dense_input, session);
-        }
-        return dense_input;
-
-    }
-
     public static void main(String[] args) {
-        try {
-            LinkedList<byte[]> models = new LinkedList<byte[]>();
-            models.add(FileUtils.readFileToByteArray(new File("machineLearning/move_to_acts.onnx")));
-            models.add(FileUtils.readFileToByteArray(new File("machineLearning/acts_to_coords.onnx")));
-            ONNXRuntime runtime = new ONNXRuntime(models);
 
-            float[] values = new float[] { 3.895135498046875000e+01f,
+        try {
+            ONNXRuntime runtime = new ONNXRuntime(
+                    FileUtils.readFileToByteArray(new File("machineLearning/move_to_acts.onnx")));
+
+            float[] moves = new float[] { 3.895135498046875000e+01f,
                     3.025833129882812500e+02f, 3.746795654296875000e+02f, 0f };
 
-            float[] acts = new float[] { -3.2441564f,
-                    1.484456E24f,
-                    -2.2189876E-25f,
-                    -4.82704999E14f,
-                    9.4420028E16f };
-            FloatBuffer data = floatArrayToBuffer(values);
-
-            OnnxTensor input_tensor = OnnxTensor.createTensor(runtime.env, data, new long[] { 1, 4 });
+            var input_tensor = OnnxTensor.createTensor(runtime.env, new float[][] { moves });
             Map<String, OnnxTensor> dense_input = Map.of("dense_input", input_tensor);
 
             // reduction index
@@ -113,7 +83,15 @@ public class ONNXRuntime {
                     3677, 3747, 3785, 3895, 3916, 4007, 4039, 4063, 4123, 4170, 4218,
                     4233, 4261, 4316, 4399, 4469, 4551, 4948, 5036, 5296, 5323, 5356,
                     5395, 5428 };
-            printFloatBuffer(reduceResults(indices, getResultsFromMap(runtime.executeAll(dense_input))));
+
+            var results = runtime.execute(dense_input);
+            var byteResults = results.get(results.keySet().toArray()[0]);
+            indices = new int[] { 4 }; // should be 1.484456E24
+            var fb = reduceResults(indices, byteResults, 4);
+            printFloatBuffer(fb.asFloatBuffer());
+
+            // var fbsmall = reduceResults(indices, fb);
+            // printFloatBuffer(fb);
 
         } catch (OrtException e) {
             // TODO Auto-generated catch block
@@ -126,42 +104,22 @@ public class ONNXRuntime {
 
     // utils
 
-    static FloatBuffer getResultsFromMap(Map<String, OnnxTensor> results) {
+    public static ByteBuffer reduceResults(int[] indices, ByteBuffer results, int dataTypeSize) {
 
-        int resultSize = 0;
-        for (OnnxTensor result : results.values()) {
-            resultSize = result.getByteBuffer().capacity();
-        }
-        FloatBuffer fb = FloatBuffer.allocate(resultSize);
-
-        for (OnnxTensor result : results.values()) {
-            fb.put(result.getByteBuffer().asFloatBuffer());
-        }
-        return fb;
-    }
-
-    public static FloatBuffer floatArrayToBuffer(float[] floatArray) {
-        ByteBuffer byteBuffer = ByteBuffer
-                .allocateDirect(floatArray.length * 4);
-        byteBuffer.order(ByteOrder.nativeOrder());
-        FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
-        floatBuffer.put(floatArray);
-        floatBuffer.position(0);
-        return floatBuffer;
-    }
-
-    public static FloatBuffer reduceResults(int[] indices, FloatBuffer results) {
-
-        FloatBuffer output = FloatBuffer.allocate(indices.length);
+        ByteBuffer output = ByteBuffer.allocate(indices.length * dataTypeSize);
         for (int index : indices) {
-            output.put(results.get(index));
-        }
 
+            for (int i = 0; i < dataTypeSize; i++) {
+                output.put(results.get(index * dataTypeSize + i));
+            }
+        }
+        output.position(0);
         return output;
     }
 
     public static void printFloatBuffer(FloatBuffer buffer) {
         System.out.println("Resut Array with size: " + buffer.limit());
+        System.out.println("Resut Buffer with allocation: " + buffer.capacity());
         System.out.print("{");
         for (int i = 0; i < buffer.capacity(); i++) {
             System.out.print(buffer.get(i) + ", ");

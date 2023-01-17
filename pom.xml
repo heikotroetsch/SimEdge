@@ -14,8 +14,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.11</maven.compiler.source>
-    <maven.compiler.target>1.11</maven.compiler.target>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
   </properties>
 
   <dependencies>
@@ -31,7 +31,14 @@
     <version>0.9.0</version>
         </dependency>
 
-<!-- https://mvnrepository.com/artifact/com.microsoft.onnxruntime/onnxruntime -->
+<!-- https://mvnrepository.com/artifact/com.microsoft.onnxruntime/onnxruntime 
+<dependency>
+    <groupId>com.microsoft.onnxruntime</groupId>
+    <artifactId>onnxruntime</artifactId>
+    <version>1.13.1</version>
+</dependency>
+-->
+
 <dependency>
     <groupId>com.microsoft.onnxruntime</groupId>
     <artifactId>onnxruntime</artifactId>
@@ -43,6 +50,12 @@
       <artifactId>commons-io</artifactId>
       <version>2.7</version>
   </dependency>
+  
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>3.21.11</version>
+    </dependency>
 
   </dependencies>
 
