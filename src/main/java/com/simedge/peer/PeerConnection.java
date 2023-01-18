@@ -8,6 +8,8 @@ import org.drasyl.node.event.Event;
 import org.drasyl.node.event.MessageEvent;
 import org.drasyl.node.event.NodeOnlineEvent;
 
+import com.simedge.protocols.PeerProtocol;
+
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 
@@ -56,13 +58,16 @@ public class PeerConnection extends DrasylNode {
             online.complete(null);
         } else if (event instanceof MessageEvent) {
 
-            ((MessageEvent) event).getPayload();
+            PeerProtocol.handleMessage(((MessageEvent) event).getPayload());
 
-            System.out.println("Got `" + ((MessageEvent) event).getPayload() + "` from `"
-                    + ((MessageEvent) event).getSender() + "`");
-            send(((MessageEvent) event).getSender(), ((MessageEvent) event).getPayload()).exceptionally(e -> {
-                throw new RuntimeException("Unable to process message.", e);
-            });
+            /**
+             * System.out.println("Got `" + ((MessageEvent) event).getPayload() + "` from `"
+             * + ((MessageEvent) event).getSender() + "`");
+             * send(((MessageEvent) event).getSender(), ((MessageEvent)
+             * event).getPayload()).exceptionally(e -> {
+             * throw new RuntimeException("Unable to process message.", e);
+             * });
+             */
         }
     }
 
