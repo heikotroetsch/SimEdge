@@ -25,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
 public class PeerConnection extends DrasylNode {
     // private static final int SIZE = Integer.parseInt(System.getProperty("size",
     // "256"));
-    private static final String IDENTITY = System.getProperty("identity", "peer-c.identity");
+    private static final String IDENTITY = System.getProperty("identity", "client-b.identity");
     final static DrasylConfig config = DrasylConfig.newBuilder()
             .identityPath(Path.of(IDENTITY))
             // .remoteMessageArmApplicationEnabled(false)
@@ -78,7 +78,7 @@ public class PeerConnection extends DrasylNode {
         });
     }
 
-    public void sendMessage(String recipient_identity, Object payload) {
+    public void sendMessage(String recipient_identity, byte payload) {
         System.out.println("Send `" + payload + "` to `" + recipient_identity + "`");
         this.send(recipient_identity, payload).exceptionally(e -> {
             throw new RuntimeException("Unable to process message.", e);
