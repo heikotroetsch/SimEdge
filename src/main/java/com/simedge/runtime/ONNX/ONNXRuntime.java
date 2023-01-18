@@ -3,9 +3,7 @@ package com.simedge.runtime.ONNX;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,15 +16,50 @@ import org.apache.commons.io.FileUtils;
 
 public class ONNXRuntime {
 
-    public OrtEnvironment env = OrtEnvironment.getEnvironment();
-    public OrtSession session;
+    public enum Error {
+        OUTOFBOUNDS("DataTypeSize Wrong or index higher than result array.", (byte) 1);
 
-    public ONNXRuntime(String modelPath) throws OrtException {
-        session = env.createSession(modelPath, new OrtSession.SessionOptions());
+        private final String errorMessage;
+        private final byte message;
+
+        private Error(String errorMessage, byte message) {
+            this.errorMessage = errorMessage;
+            this.message = message;
+        }
+
+        public static String messageOf(byte error) {
+            switch (error) {
+                case (byte) 1:
+                    return ONNXRuntime.Error.OUTOFBOUNDS.errorMessage;
+                default:
+                    return "Error not specified";
+            }
+        }
     }
 
-    public ONNXRuntime(byte[] model) throws OrtException {
+    public OrtEnvironment env = OrtEnvironment.getEnvironment();
+    private OrtSession session;
+    private int[] indicies;
+    private int dataTypeSize;
+
+    /**
+     * 
+     * @param model        Bytes of the ML ONNX model. Using>
+     *                     FileUtils.readFileToByteArray(new File(String Path)),
+     * @param indicies     Reduction indicies. From each results only those will be
+     *                     returned which position is specified in this indicies
+     *                     array. By only returing parts of each model network speed
+     *                     can be improved. These results can be interpolated
+     *                     afterwards using statistical models. NULL = dont use
+     *                     (Return the full results as bytes)
+     * @param dataTypeSize The number of bytes for one entry of the used result data
+     *                     type
+     * @throws OrtException
+     */
+    public ONNXRuntime(byte[] model, int[] indicies, int dataTypeSize) throws OrtException {
         session = env.createSession(model, new OrtSession.SessionOptions());
+        this.indicies = indicies;
+        this.dataTypeSize = dataTypeSize;
     }
 
     /**
@@ -36,7 +69,7 @@ public class ONNXRuntime {
      *         Returns null if something went wrong.
      * @throws OrtException
      */
-    public Map<String, ByteBuffer> execute(Map<String, OnnxTensor> dense_input)
+    public ByteBuffer execute(Map<String, OnnxTensor> dense_input)
             throws OrtException {
 
         long start = System.currentTimeMillis();
@@ -48,7 +81,6 @@ public class ONNXRuntime {
 
             for (var result : results) {
                 var outputTensor = (OnnxTensor) result.getValue();
-                // TODO return results as array of byte arrays or buffer
 
                 System.out.println(session.getInputInfo());
                 System.out.println(outputTensor.getInfo());
@@ -56,7 +88,7 @@ public class ONNXRuntime {
                 dense_output.put(result.getKey(), outputTensor.getByteBuffer());
 
             }
-            return dense_output;
+            return reduceResults(this.indicies, dense_output, this.dataTypeSize);
         }
 
     }
@@ -64,8 +96,14 @@ public class ONNXRuntime {
     public static void main(String[] args) {
 
         try {
+
+            int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
+                    1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
+                    1742, 2139, 2227, 2487, 2514,
+                    2547, 2586, 2619 };
             ONNXRuntime runtime = new ONNXRuntime(
-                    FileUtils.readFileToByteArray(new File("machineLearning/move_to_acts.onnx")));
+                    FileUtils.readFileToByteArray(new File("machineLearning/net_combined_moves2coords.onnx")),
+                    indices, 4);
 
             float[] moves = new float[] { 3.895135498046875000e+01f,
                     3.025833129882812500e+02f, 3.746795654296875000e+02f, 0f };
@@ -73,25 +111,13 @@ public class ONNXRuntime {
             var input_tensor = OnnxTensor.createTensor(runtime.env, new float[][] { moves });
             Map<String, OnnxTensor> dense_input = Map.of("dense_input", input_tensor);
 
-            // reduction index index * 3 + xyz
-            int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
-                    1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
-                    1742, 2139, 2227, 2487, 2514, 2547, 2586, 2619, 2824, 2861, 3148,
-                    3243, 3379, 3539, 3677, 3747, 3785, 3895, 3916, 4007, 4039, 4063,
-                    4123, 4170, 4218, 4233, 4261, 4316, 4399, 4469, 4551, 4948, 5036,
-                    5296, 5323, 5356, 5395, 5428, 2824, 2861, 3148, 3243, 3379, 3539,
-                    3677, 3747, 3785, 3895, 3916, 4007, 4039, 4063, 4123, 4170, 4218,
-                    4233, 4261, 4316, 4399, 4469, 4551, 4948, 5036, 5296, 5323, 5356,
-                    5395, 5428 };
-
             var results = runtime.execute(dense_input);
-            var byteResults = results.get(results.keySet().toArray()[0]);
-            indices = new int[] { 4 }; // should be 1.484456E24
-            var fb = reduceResults(indices, byteResults, 4);
-            printFloatBuffer(fb.asFloatBuffer());
 
-            // var fbsmall = reduceResults(indices, fb);
-            // printFloatBuffer(fb);
+            if (results.limit() == 1) {
+                System.out.print(ONNXRuntime.Error.messageOf(results.get()));
+            } else {
+                printFloatBuffer(results.asFloatBuffer());
+            }
 
         } catch (OrtException e) {
             // TODO Auto-generated catch block
@@ -104,7 +130,39 @@ public class ONNXRuntime {
 
     // utils
 
-    public static ByteBuffer reduceResults(int[] indices, ByteBuffer results, int dataTypeSize) {
+    private static ByteBuffer reduceResults(int[] indicies, Map<String, ByteBuffer> results, int dataTypeSize) {
+
+        if (indicies != null) {
+            // reduce by indice
+            ByteBuffer output = ByteBuffer.allocate(results.size() * indicies.length * dataTypeSize);
+
+            for (var result : results.entrySet()) {
+                try {
+                    output.put(reduceOneResults(indicies, result.getValue(), dataTypeSize));
+                } catch (IndexOutOfBoundsException e) {
+                    output = ByteBuffer.allocate(1);
+                    output.put(ONNXRuntime.Error.OUTOFBOUNDS.message);
+                }
+            }
+            output.position(0);
+            return output;
+        } else {
+            // no indice specified so return results as bytes
+            int size = 0;
+            for (var result : results.entrySet()) {
+                size += result.getValue().limit();
+            }
+            ByteBuffer output = ByteBuffer.allocate(size);
+            for (var result : results.entrySet()) {
+                output.put(result.getValue());
+            }
+            output.position(0);
+            return output;
+        }
+    }
+
+    public static ByteBuffer reduceOneResults(int[] indices, ByteBuffer results, int dataTypeSize)
+            throws IndexOutOfBoundsException {
 
         ByteBuffer output = ByteBuffer.allocate(indices.length * dataTypeSize);
         for (int index : indices) {
