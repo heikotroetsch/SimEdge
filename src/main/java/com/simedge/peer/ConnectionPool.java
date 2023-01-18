@@ -12,7 +12,7 @@ public class ConnectionPool {
     public static PeerConnection node;
     public static ClientThread brokerConnection;
 
-    public static void initPeer() {
+    public static void initPeer(int numberOfResources) {
         try {
             node = new PeerConnection();
         } catch (DrasylException e) {
@@ -21,12 +21,12 @@ public class ConnectionPool {
         }
         brokerConnection = new ClientThread(node.identity().getAddress().toString());
         brokerConnection.start();
-        brokerConnection.brokerProtocol.REGISTER(4);
+        brokerConnection.brokerProtocol.REGISTER(numberOfResources);
         brokerConnection.brokerProtocol.GET_RESOURCE();
     }
 
     public static void main(final String[] args) throws DrasylException {
-        initPeer();
+        initPeer(4);
 
         while (true) {
 
