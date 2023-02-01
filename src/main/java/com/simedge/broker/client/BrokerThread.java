@@ -6,12 +6,15 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.simedge.protocols.BrokerProtocol;
 
-public class ClientThread extends Thread {
-    String hostname = "134.155.108.108";
+public class BrokerThread extends Thread {
+    // String hostname = "134.155.108.108";
+    String hostname = "localhost";
     int port = 12345;
     BufferedReader reader;
     PrintWriter writer;
@@ -20,9 +23,10 @@ public class ClientThread extends Thread {
     public String peerIdentity;
 
     public ConcurrentLinkedQueue<String> messageQueue = new ConcurrentLinkedQueue<String>();
-    public BrokerProtocol brokerProtocol = new BrokerProtocol(this);
+    public BrokerProtocol brokerProtocol;
 
-    public ClientThread(String peerIdentiy) {
+    public BrokerThread(String peerIdentiy, ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels) {
+        this.brokerProtocol = new BrokerProtocol(this, commitedModels);
         this.peerIdentity = peerIdentiy;
         this.initThread();
     }
@@ -52,11 +56,11 @@ public class ClientThread extends Thread {
                 }
 
                 if (reader.ready()) {
-                    // reads message type and content. Content is nu ll if empty.
+                    // reads message type and content. Content is null if empty.
                     int messageType = reader.read() - 48; // 48 is the char number for 0
-                    System.out.println(messageType);
+                    System.out.println("Message Type Received: " + messageType);
                     String content = reader.readLine();
-                    System.out.println(content);
+                    System.out.println("Message Received: " + content);
                     System.out.println("message type: " + messageType + " content: " + content);
                     // handle message
                     handleMessage(messageType, content);
@@ -105,6 +109,18 @@ public class ClientThread extends Thread {
 
             case BrokerProtocol.SET_PING:
                 brokerProtocol.process_SET_PING(content);
+                break;
+            case BrokerProtocol.CHECK_MODEL:
+                brokerProtocol.process_CHECK_MODEL(content);
+                break;
+
+            case BrokerProtocol.LOAD_MODEL:
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        brokerProtocol.process_LOAD_MODEL(content);
+                    }
+                }).start();
                 break;
 
             case BrokerProtocol.BYE:

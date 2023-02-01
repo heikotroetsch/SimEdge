@@ -1,7 +1,9 @@
 package com.simedge.runtime.ONNX;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.HashMap;
@@ -57,7 +59,8 @@ public class ONNXRuntime {
      * @throws OrtException
      */
     public ONNXRuntime(byte[] model, int[] indicies, int dataTypeSize) throws OrtException {
-        session = env.createSession(model, new OrtSession.SessionOptions());
+        var sessionOptions = new OrtSession.SessionOptions();
+        session = env.createSession(model, sessionOptions);
         this.indicies = indicies;
         this.dataTypeSize = dataTypeSize;
     }
@@ -94,15 +97,16 @@ public class ONNXRuntime {
     }
 
     public static void main(String[] args) {
-
         try {
 
             int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
                     1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
                     1742, 2139, 2227, 2487, 2514,
                     2547, 2586, 2619 };
+
             ONNXRuntime runtime = new ONNXRuntime(
-                    FileUtils.readFileToByteArray(new File("machineLearning/net_combined_moves2coords.onnx")),
+                    FileUtils.readFileToByteArray(
+                            new File("modelCache/baed48a5c57c26eb7efc412cfd26ca6e379e86e3")),
                     indices, 4);
 
             float[] moves = new float[] { 3.895135498046875000e+01f,
@@ -110,9 +114,8 @@ public class ONNXRuntime {
 
             var input_tensor = OnnxTensor.createTensor(runtime.env, new float[][] { moves });
             Map<String, OnnxTensor> dense_input = Map.of("dense_input", input_tensor);
-
-            var results = runtime.execute(dense_input);
-
+            ByteBuffer results;
+            results = runtime.execute(dense_input);
             if (results.limit() == 1) {
                 System.out.print(ONNXRuntime.Error.messageOf(results.get()));
             } else {
@@ -126,6 +129,7 @@ public class ONNXRuntime {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+
     }
 
     // utils
@@ -159,6 +163,54 @@ public class ONNXRuntime {
             output.position(0);
             return output;
         }
+    }
+
+    public static int getGPUid() {
+        try {
+            if (System.getProperty("os.name").contains("Windows")) {
+                String line;
+
+                Process p = Runtime.getRuntime().exec("powershell.exe (Get-WmiObject Win32_VideoController).Name");
+                BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                int id = 0;
+                while ((line = input.readLine()) != null) {
+                    if (line.contains("NVIDIA")) {
+                        System.out.println("NVIDIA GPU found");
+                        System.out.println(line);
+                        return id;
+                    } else if (line.contains("AMD")) {
+                        System.out.println("AMD GPU found");
+                        System.out.println(line);
+                        return id;
+                    }
+                    id++;
+                }
+                input.close();
+            } else if (System.getProperty("os.name").contains("Linux")) {
+                String line;
+
+                Process p = Runtime.getRuntime().exec("lspci | grep VGA");
+                BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                int id = 0;
+                while ((line = input.readLine()) != null) {
+                    if (line.contains("NVIDIA")) {
+                        System.out.println("NVIDIA GPU found");
+                        System.out.println(line);
+                        return id;
+                    } else if (line.contains("AMD")) {
+                        System.out.println("AMD GPU found");
+                        System.out.println(line);
+                        return id;
+                    }
+                    id++;
+                }
+                input.close();
+            }
+        } catch (Exception e) {
+            System.err.println("Could not determine GPU");
+        }
+        System.out.println("No GPU found");
+        return -1;
     }
 
     public static ByteBuffer reduceOneResults(int[] indices, ByteBuffer results, int dataTypeSize)

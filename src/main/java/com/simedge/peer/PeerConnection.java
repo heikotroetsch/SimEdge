@@ -1,6 +1,10 @@
 package com.simedge.peer;
 
-import org.drasyl.annotation.NonNull;
+import org.drasyl.handler.PeersRttHandler;
+import org.drasyl.handler.PeersRttHandler.PeerRtt;
+import org.drasyl.handler.PeersRttHandler.PeersRttReport;
+import org.drasyl.handler.PeersRttHandler.PeerRtt.Role;
+import org.drasyl.identity.DrasylAddress;
 import org.drasyl.node.DrasylConfig;
 import org.drasyl.node.DrasylException;
 import org.drasyl.node.DrasylNode;
@@ -10,7 +14,11 @@ import org.drasyl.node.event.NodeOnlineEvent;
 
 import com.simedge.protocols.PeerProtocol;
 
+import io.netty.channel.ChannelHandlerContext;
+
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -52,13 +60,13 @@ public class PeerConnection extends DrasylNode {
     }
 
     @Override
-    public void onEvent(final @NonNull Event event) {
+    public void onEvent(final @org.drasyl.util.internal.NonNull Event event) {
         // hier keine Blokierenden sachen weil während dessn empfängt man keine Messages
         if (event instanceof NodeOnlineEvent) {
             online.complete(null);
         } else if (event instanceof MessageEvent) {
-
-            PeerProtocol.handleMessage(((MessageEvent) event).getPayload());
+            PeerProtocol.handleMessage(((MessageEvent) event).getPayload(),
+                    ((MessageEvent) event).getSender());
 
             /**
              * System.out.println("Got `" + ((MessageEvent) event).getPayload() + "` from `"
@@ -72,13 +80,6 @@ public class PeerConnection extends DrasylNode {
     }
 
     public void sendMessage(String recipient_identity, String payload) {
-        System.out.println("Send `" + payload + "` to `" + recipient_identity + "`");
-        this.send(recipient_identity, payload).exceptionally(e -> {
-            throw new RuntimeException("Unable to process message.", e);
-        });
-    }
-
-    public void sendMessage(String recipient_identity, byte payload) {
         System.out.println("Send `" + payload + "` to `" + recipient_identity + "`");
         this.send(recipient_identity, payload).exceptionally(e -> {
             throw new RuntimeException("Unable to process message.", e);
