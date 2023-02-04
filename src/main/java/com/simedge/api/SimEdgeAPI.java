@@ -11,41 +11,67 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+
+import javax.swing.plaf.synth.SynthOptionPaneUI;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPSClient;
+import org.drasyl.node.event.Peer;
+
+import com.google.protobuf.Message;
 import com.simedge.peer.ConnectionPool;
 import com.simedge.protocols.PeerMessage;
 
 public class SimEdgeAPI {
 
+    public static MessageDigest md;
+
     private static ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels = new ConcurrentHashMap<ByteBuffer, Boolean[]>();
 
     public SimEdgeAPI(int resources, int MAX_MEMORY_MB) {
         ConnectionPool.initPeer(resources, MAX_MEMORY_MB * 1000000, commitedModels);
-    }
-
-    public void executeONNX(byte[] modelFile, String dataInputName, byte[] inputData, PeerMessage.DataType dType,
-            int[] indicies) {
-
-        MessageDigest md;
         try {
-            md = MessageDigest.getInstance("SHA-1");
-            byte[] message = new PeerMessage(PeerMessage.MessageType.EXECUTE, dType, inputData, md.digest(modelFile),
-                    dataInputName, indicies).getMessageBytes();
-            // TODO fix resource selection with peek. This must smartly get resources and
-            // rotate through them
-            ConnectionPool.node.send(ConnectionPool.availibleResources.peek(), message);
 
+            md = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+    }
+
+    public void executeONNX(byte[] modelHash, String dataInputName, byte[] inputData, PeerMessage.DataType dType,
+            int[] indicies) {
+        if (!ConnectionPool.node.fullMessageController()) {
+            // Only send if message controller has space
+            if (ConnectionPool.availibleResources.isEmpty()) {
+                if (ConnectionPool.node.peerAvailible(ConnectionPool.node.identity().getAddress().toString())) {
+                    PeerMessage message = new PeerMessage(PeerMessage.MessageType.EXECUTE, dType, inputData, modelHash,
+                            dataInputName, indicies);
+                    ConnectionPool.node.sendMessage(ConnectionPool.node.identity().getAddress().toString(), message);
+                }
+            } else {
+                // TODO fix resource selection with peek. This must smartly get resources by
+                // best execution result
+
+                String LRU = ConnectionPool.availibleResources.peek();
+                if (ConnectionPool.node.peerAvailible(LRU)) {
+                    ConnectionPool.availibleResources.add(LRU);
+                    ConnectionPool.availibleResources.remove();
+
+                    PeerMessage message = new PeerMessage(PeerMessage.MessageType.EXECUTE, dType, inputData, modelHash,
+                            dataInputName, indicies);
+
+                    ConnectionPool.node.sendMessage(LRU, message);
+                }
+
+            }
+        }
 
     }
 
-    public void commitModel(byte[] modelFile) throws NoSuchAlgorithmException {
-        MessageDigest md = MessageDigest.getInstance("SHA-1");
+    public byte[] commitModel(byte[] modelFile) throws NoSuchAlgorithmException {
         ByteBuffer hash = ByteBuffer.wrap(md.digest(modelFile));
         ConnectionPool.modelCache.put(hash, modelFile);
         commitedModels.put(hash, new Boolean[] { false, false });
@@ -73,15 +99,22 @@ public class SimEdgeAPI {
         }
 
         ConnectionPool.brokerConnection.brokerProtocol.GET_RESOURCE();
+        return hash.array();
 
     }
 
     private static boolean uploadFile(String hash, byte[] file) {
         boolean finished = false;
+
+        System.out.println("UPLOADING HASH: " + ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(file)));
         try {
             FTPSClient ftpClient = new FTPSClient();
             ftpClient.connect("134.155.108.108", 2021);
+            System.out.print(ftpClient.getReplyString());
             ftpClient.enterLocalPassiveMode();
+
+            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+            System.out.print(ftpClient.getReplyString());
 
             ftpClient.login("simedge", "hte^W9k$DaZ@ep^q3%b1^A9h6g");
             System.out.print(ftpClient.getReplyString());
@@ -90,11 +123,15 @@ public class SimEdgeAPI {
             System.out.print(ftpClient.getReplyString());
 
             long start = System.currentTimeMillis();
-            finished = ftpClient.storeFile(hash,
-                    new ByteArrayInputStream(file));
-            System.out.println(ftpClient.getReplyString());
-            System.out.println("Upload took: " + ((System.currentTimeMillis() - start) / 1000) + " seconds");
+            var stream = new ByteArrayInputStream(file);
 
+            finished = ftpClient.storeFile(hash,
+                    stream);
+            stream.close();
+            System.out.println(ftpClient.getReplyString());
+            System.out
+                    .println("Upload " + finished + ": " + ((System.currentTimeMillis() - start) / 1000) + " seconds");
+            ftpClient.disconnect();
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -103,7 +140,7 @@ public class SimEdgeAPI {
         return finished;
     }
 
-    public static void main(String[] args) {
+    public static void mainold(String[] args) {
 
         int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
                 1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
@@ -120,10 +157,10 @@ public class SimEdgeAPI {
         SimEdgeAPI api = new SimEdgeAPI(4, 1024);
         try {
             byte[] model = FileUtils.readFileToByteArray(new File("ML_Models/net_combined_moves2coords.onnx"));
-            api.commitModel(model);
-            while (true) {
 
-                api.executeONNX(model, "dense_input", movesbf.array(), PeerMessage.DataType.FLOAT, indices);
+            byte[] modelHash = api.commitModel(model);
+            while (true) {
+                api.executeONNX(modelHash, "dense_input", movesbf.array(), PeerMessage.DataType.FLOAT, indices);
             }
 
         } catch (NoSuchAlgorithmException e) {
@@ -133,6 +170,11 @@ public class SimEdgeAPI {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+
+    }
+
+    public static void main(String[] args) {
+        SimEdgeAPI api = new SimEdgeAPI(4, 1024);
 
     }
 

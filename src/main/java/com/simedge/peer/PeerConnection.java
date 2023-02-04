@@ -12,6 +12,7 @@ import org.drasyl.node.event.Event;
 import org.drasyl.node.event.MessageEvent;
 import org.drasyl.node.event.NodeOnlineEvent;
 
+import com.simedge.protocols.PeerMessage;
 import com.simedge.protocols.PeerProtocol;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -20,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Starts a {@link DrasylNode} which sends one message to given address and
@@ -33,6 +35,10 @@ import java.util.concurrent.CompletableFuture;
 public class PeerConnection extends DrasylNode {
     // private static final int SIZE = Integer.parseInt(System.getProperty("size",
     // "256"));
+    private ConcurrentHashMap<String, Long> peerLastUsed = new ConcurrentHashMap<String, Long>();
+    private ConcurrentHashMap<Long, Long> messageController = new ConcurrentHashMap<Long, Long>();
+    public static final int MAX_MESSAGES = 10;
+    public static final int TIMEOUT = 1000;
     private static final String IDENTITY = System.getProperty("identity", "client-b.identity");
     final static DrasylConfig config = DrasylConfig.newBuilder()
             .identityPath(Path.of(IDENTITY))
@@ -65,8 +71,18 @@ public class PeerConnection extends DrasylNode {
         if (event instanceof NodeOnlineEvent) {
             online.complete(null);
         } else if (event instanceof MessageEvent) {
-            PeerProtocol.handleMessage(((MessageEvent) event).getPayload(),
+
+            PeerMessage peerMessage = new PeerMessage((byte[]) ((MessageEvent) event).getPayload());
+
+            PeerProtocol.handleMessage(peerMessage,
                     ((MessageEvent) event).getSender());
+
+            if (peerMessage.messageType == PeerMessage.MessageType.RESULT) {
+
+                messageController.remove(peerMessage.messageNumber);
+                System.out
+                        .println("remove from message Controller! \tFree:" + (MAX_MESSAGES - messageController.size()));
+            }
 
             /**
              * System.out.println("Got `" + ((MessageEvent) event).getPayload() + "` from `"
@@ -79,11 +95,91 @@ public class PeerConnection extends DrasylNode {
         }
     }
 
-    public void sendMessage(String recipient_identity, String payload) {
-        System.out.println("Send `" + payload + "` to `" + recipient_identity + "`");
-        this.send(recipient_identity, payload).exceptionally(e -> {
+    public boolean sendMessage(String recipient_identity, PeerMessage peerMessage) {
+        // Prime connection to target before using full message speed.
+        Long lastPeerMessageTime = peerLastUsed.get(recipient_identity);
+        if (lastPeerMessageTime == null
+                || ((System.currentTimeMillis() - lastPeerMessageTime) >= TIMEOUT) && lastPeerMessageTime != -1) {
+            // if no message has been sent to the peer or not recently (longer than Timeout)
+            // then send one message and put -1 in the peerLastUsed hashmap. No Message will
+            // be sent until the first message returns.
+            System.out.println("Sending first Message to Peer: " + recipient_identity);
+            peerLastUsed.put(recipient_identity, -1L);
+            this.send(recipient_identity, peerMessage.getMessageBytes()).exceptionally(e -> {
+                throw new RuntimeException("Unable to process message.", e);
+            });
+            return false;
+        } else if (lastPeerMessageTime == -1) {
+            // return if waiting for first response
+            System.out.println("waiting for first response from peer: " + recipient_identity);
+            return false;
+        }
+
+        // if controller has space left send message (Because we checked that the last
+        // usage of the peer was not longer than our TIMEOUT a return message is
+        // expected quikckly)
+        if (messageController.size() <= MAX_MESSAGES) {
+            System.out.println("Sending to " + recipient_identity + "\t" + peerMessage.messageNumber);
+            messageController.put(peerMessage.messageNumber, System.currentTimeMillis());
+            this.send(recipient_identity, peerMessage.getMessageBytes()).exceptionally(e -> {
+                throw new RuntimeException("Unable to process message.", e);
+            });
+
+            return true;
+        } else {
+            // if there is no space left in the controller we will clen up all messages
+            // older than Timeout
+            cleanUpMessages();
+            return false;
+        }
+
+    }
+
+    /**
+     * Own method fo sending results. Sending results is always possible even if
+     * Message controller is full. Ensures instant sendback.
+     * 
+     * @param recipient_identity String Adress of node to send to
+     * @param peerMessage        Message to be sent
+     */
+    public void sendResultMessage(String recipient_identity, PeerMessage peerMessage) {
+        this.send(recipient_identity, peerMessage.getMessageBytes()).exceptionally(e -> {
             throw new RuntimeException("Unable to process message.", e);
         });
+
+    }
+
+    private synchronized void cleanUpMessages() {
+        long time = System.currentTimeMillis();
+        for (var v : messageController.entrySet()) {
+            if (v.getValue() + TIMEOUT < time) {
+                System.out.println("Removed Message Number : " + v.getKey());
+                messageController.remove(v.getKey());
+            }
+        }
+    }
+
+    public boolean fullMessageController() {
+        if (messageController.size() >= MAX_MESSAGES) {
+            cleanUpMessages();
+            return true;
+        } else {
+            return false;
+        }
+
+    }
+
+    public boolean peerAvailible(String peer) {
+        Long lastPeerMessageTime = peerLastUsed.get(peer);
+        if (lastPeerMessageTime == null) {
+            return true;
+        } else {
+            return (System.currentTimeMillis() - lastPeerMessageTime) < TIMEOUT;
+        }
+    }
+
+    public void updatePeerLastUsed(String peer) {
+        peerLastUsed.put(peer, System.currentTimeMillis());
     }
 
 }

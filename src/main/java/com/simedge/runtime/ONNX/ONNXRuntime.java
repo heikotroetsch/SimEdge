@@ -85,12 +85,10 @@ public class ONNXRuntime {
             for (var result : results) {
                 var outputTensor = (OnnxTensor) result.getValue();
 
-                System.out.println(session.getInputInfo());
-                System.out.println(outputTensor.getInfo());
-
                 dense_output.put(result.getKey(), outputTensor.getByteBuffer());
 
             }
+
             return reduceResults(this.indicies, dense_output, this.dataTypeSize);
         }
 
@@ -137,6 +135,7 @@ public class ONNXRuntime {
     private static ByteBuffer reduceResults(int[] indicies, Map<String, ByteBuffer> results, int dataTypeSize) {
 
         if (indicies != null) {
+
             // reduce by indice
             ByteBuffer output = ByteBuffer.allocate(results.size() * indicies.length * dataTypeSize);
 
@@ -149,6 +148,7 @@ public class ONNXRuntime {
                 }
             }
             output.position(0);
+
             return output;
         } else {
             // no indice specified so return results as bytes

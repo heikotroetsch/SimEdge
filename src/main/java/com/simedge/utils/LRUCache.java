@@ -2,6 +2,7 @@ package com.simedge.utils;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -14,8 +15,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.net.ftp.FTPSClient;
 
 import com.simedge.peer.ConnectionPool;
+import com.simedge.protocols.BrokerProtocol;
 import com.simedge.runtime.ONNX.ONNXRuntime;
 
 public class LRUCache {
@@ -25,6 +28,7 @@ public class LRUCache {
     ConcurrentHashMap<ByteBuffer, ONNXRuntime> onnxRuntimes = new ConcurrentHashMap<ByteBuffer, ONNXRuntime>();
 
     ConcurrentLinkedDeque<ByteBuffer> LRU = new ConcurrentLinkedDeque<ByteBuffer>();
+    private ConcurrentHashMap<ByteBuffer, Boolean> downloadingModel = new ConcurrentHashMap<ByteBuffer, Boolean>();
 
     public LRUCache(long MAX_MEMORY) {
         this.MAX_MEMORY = MAX_MEMORY;
@@ -136,11 +140,28 @@ public class LRUCache {
         } else {
             // if not in cache load from disk
             try {
+                var file = new File("modelCache/" + ConnectionPool.bytesToHex(hash.array()));
                 this.put(hash, FileUtils
-                        .readFileToByteArray(new File("modelCache/" + ConnectionPool.bytesToHex(hash.array()))));
+                        .readFileToByteArray(file));
             } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                // if not on disk then get from server
+                if (downloadingModel.get(hash) != null && downloadingModel.get(hash)) {
+                    return null;
+                }
+                downloadingModel.put(hash, true);
+
+                // TODO do in thread so not blocking
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        BrokerProtocol.downloadModel(ConnectionPool.bytesToHex(hash.array()));
+                        downloadingModel.remove(hash);
+                    }
+                }).start();
+
+                return null;
+                // throw away message after download since it took way too long
             }
         }
         return models.get(hash);

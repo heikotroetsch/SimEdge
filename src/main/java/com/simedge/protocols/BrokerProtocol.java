@@ -104,8 +104,10 @@ public class BrokerProtocol {
     }
 
     public void process_GET_RESOURCE(String content) {
+        System.out.println("Adding Resource");
         ConnectionPool.availibleResources.add(content);
-        ConnectionPool.node.sendMessage(content, "Hello");
+        System.out.println("Added Resource");
+        System.out.println(ConnectionPool.availibleResources.isEmpty());
     }
 
     public void process_CHECK_MODEL(String content) {
@@ -126,6 +128,15 @@ public class BrokerProtocol {
 
     public void process_LOAD_MODEL(String content) {
         String hash = content.split(";")[0];
+        boolean finished = downloadModel(hash);
+
+        if (finished) {
+            MODEL_CACHED(ConnectionPool.hexToBytes(hash));
+        }
+
+    }
+
+    public static boolean downloadModel(String hash) {
         boolean finished = false;
         try {
             FTPSClient ftpClient = new FTPSClient();
@@ -140,10 +151,23 @@ public class BrokerProtocol {
 
             long start = System.currentTimeMillis();
             ByteArrayOutputStream file = new ByteArrayOutputStream();
+
             finished = ftpClient.retrieveFile(hash, file);
-            ConnectionPool.modelCache.put(ByteBuffer.wrap(ConnectionPool.hexToBytes(hash)), file.toByteArray());
-            System.out.println(ftpClient.getReplyString());
-            System.out.println("Download Took: " + ((System.currentTimeMillis() - start) / 1000) + " seconds");
+            byte[] fileArray = file.toByteArray();
+
+            if (finished
+                    && ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)).equalsIgnoreCase(hash)) {
+
+                ConnectionPool.modelCache.put(ByteBuffer.wrap(ConnectionPool.hexToBytes(hash)), fileArray);
+                System.out.println(ftpClient.getReplyString());
+                System.out.println("Download Took: " + ((System.currentTimeMillis() - start) / 1000) + " seconds");
+                ftpClient.disconnect();
+            } else {
+                System.out.println("Download failed!!! Hash: " + hash + " != "
+                        + ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)).equalsIgnoreCase(hash));
+                ftpClient.disconnect();
+
+            }
 
             // TODO add logic that throws out cached model if not enough memory
 
@@ -151,11 +175,6 @@ public class BrokerProtocol {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-
-        if (finished) {
-            MODEL_CACHED(ConnectionPool.hexToBytes(hash));
-        }
-
+        return finished;
     }
-
 }

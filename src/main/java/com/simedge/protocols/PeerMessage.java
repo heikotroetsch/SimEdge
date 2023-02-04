@@ -91,8 +91,8 @@ public class PeerMessage {
     static final int dataTypeLength = 1;
     static int messageCounter = 0;
 
-    long messageNumber = messageCounter + 1;
-    MessageType messageType;
+    public long messageNumber = messageCounter + 1;
+    public MessageType messageType;
     DataType dataTye;
     ByteBuffer data;
     byte[] modelHash;
@@ -108,7 +108,7 @@ public class PeerMessage {
         data.put(packet);
         data.position(0);
         this.messageNumber = data.getLong();
-        System.out.println(messageNumber);
+        System.out.println("Message Number: " + messageNumber);
         this.messageType = MessageType.processByte(data.get());
 
         if (messageType == MessageType.EXECUTE) {
@@ -132,7 +132,7 @@ public class PeerMessage {
             }
 
         } else if (messageType == MessageType.RESULT) {
-            System.out.println("Data with " + data.remaining() + " bytes received");
+            System.out.println("Result with " + data.remaining() + " bytes received");
         }
 
     }
@@ -152,8 +152,8 @@ public class PeerMessage {
         this.indices = indices;
     }
 
-    public PeerMessage(ByteBuffer data) {
-        this.messageNumber = messageCounter;
+    public PeerMessage(ByteBuffer data, long messageNumber) {
+        this.messageNumber = messageNumber;
         messageCounter++;
         this.messageType = MessageType.RESULT;
         this.data = data;

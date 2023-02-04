@@ -6,6 +6,7 @@ import java.util.Map;
 import org.drasyl.identity.DrasylAddress;
 
 import com.simedge.peer.ConnectionPool;
+import com.simedge.peer.PeerConnection;
 import com.simedge.runtime.ONNX.ONNXRuntime;
 
 import ai.onnxruntime.OnnxTensor;
@@ -13,18 +14,21 @@ import ai.onnxruntime.OrtException;
 
 public class PeerProtocol {
 
-    public static void handleMessage(Object payload, DrasylAddress source) {
+    public static void handleMessage(PeerMessage peerMessage, DrasylAddress source) {
 
-        PeerMessage peerMessage = new PeerMessage((byte[]) payload);
         if (peerMessage.messageType == PeerMessage.MessageType.EXECUTE) {
             ByteBuffer results = ByteBuffer.allocate(1);
             try {
                 ONNXRuntime runtime = null;
                 if ((runtime = ConnectionPool.modelCache
                         .getONNXRuntime(ByteBuffer.wrap(peerMessage.modelHash))) == null) {
-                    runtime = new ONNXRuntime(
-                            ConnectionPool.modelCache.get(ByteBuffer.wrap(peerMessage.modelHash)),
-                            peerMessage.indices, peerMessage.dataTye.getDataTypeSize());
+
+                    var model = ConnectionPool.modelCache.get(ByteBuffer.wrap(peerMessage.modelHash));
+                    if (model == null) {
+                        // if model is downloading message is thrown away
+                        return;
+                    }
+                    runtime = new ONNXRuntime(model, peerMessage.indices, peerMessage.dataTye.getDataTypeSize());
                     ConnectionPool.modelCache.putONNXRuntime(ByteBuffer.wrap(peerMessage.modelHash), runtime);
                 }
 
@@ -85,8 +89,9 @@ public class PeerProtocol {
                 Map<String, OnnxTensor> dense_input = Map.of(peerMessage.inputName, input_tensor);
 
                 results = runtime.execute(dense_input);
-
-                ConnectionPool.node.send(source.toString(), new PeerMessage(results).getMessageBytes());
+                System.out.println("Sending results  to: " + source.toString());
+                ConnectionPool.node.sendResultMessage(source.toString(),
+                        new PeerMessage(results, peerMessage.messageNumber));
 
             } catch (OrtException e) {
                 // TODO Auto-generated catch block
@@ -95,8 +100,10 @@ public class PeerProtocol {
 
         } else if (peerMessage.messageType == PeerMessage.MessageType.RESULT) {
             // handle result
-            System.out.println("Result type");
-            ONNXRuntime.printFloatBuffer(ByteBuffer.wrap((byte[]) payload).asFloatBuffer());
+            ONNXRuntime.printFloatBuffer(ByteBuffer.wrap(peerMessage.data.array()).asFloatBuffer());
+            System.out.println("Result Number: " + peerMessage.messageNumber);
+            ConnectionPool.node.updatePeerLastUsed(source.toString());
+
         } else {
             System.out.println("No Peer message type type");
 

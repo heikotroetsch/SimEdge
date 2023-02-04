@@ -64,6 +64,7 @@ public class ConnectionPool {
     }
 
     private static void fillModelCache() throws IOException, NoSuchAlgorithmException {
+        // if folder missing make folder
         File[] models = new File("modelCache/").listFiles();
         System.out.println(Arrays.toString(models));
         MessageDigest md = MessageDigest.getInstance("SHA-1");
