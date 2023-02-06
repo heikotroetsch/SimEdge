@@ -76,6 +76,13 @@ public class BrokerThread extends Thread {
                     System.out.println("message sent: " + message);
                 }
 
+                try {
+                    BrokerThread.sleep(50);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+
             } while (!stop);
 
             socket.close();
