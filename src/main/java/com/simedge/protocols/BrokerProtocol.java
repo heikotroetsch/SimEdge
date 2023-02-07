@@ -3,7 +3,10 @@ package com.simedge.protocols;
 import java.io.File;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.net.ftp.FTPSClient;
@@ -54,16 +57,16 @@ public class BrokerProtocol {
         for (int i : pings) {
             ping.append(i + ";");
         }
-        source.messageQueue.add(BrokerProtocol.HELLO + source.peerIdentity + ";" + numberResources + ";"
+        source.messageQueue.add(HELLO + source.peerIdentity + ";" + numberResources + ";"
                 + ping.toString() + System.getProperty("line.separator"));
     }
 
-    public void GET_RESOURCE() {
-        source.messageQueue.add(GET_RESOURCE + System.getProperty("line.separator"));
+    public void GET_RESOURCE(int numberResources) {
+        source.messageQueue.add(GET_RESOURCE + "" + numberResources + ";" + System.getProperty("line.separator"));
     }
 
     public void RETURN_RESOURCE(String resourceIdentity) {
-        source.messageQueue.add(RETURN_RESOURCE + resourceIdentity + System.getProperty("line.separator"));
+        source.messageQueue.add(RETURN_RESOURCE + resourceIdentity + ";" + System.getProperty("line.separator"));
     }
 
     public void CHECK_MODEL(byte[] modelHash) {
@@ -73,6 +76,7 @@ public class BrokerProtocol {
     }
 
     public void MODEL_CACHED(byte[] modelHash) {
+        System.out.println("WHATTHEFUCK");
         System.out.println("Hashlength: " + modelHash.length);
         source.messageQueue
                 .add(MODEL_CACHED + ConnectionPool.bytesToHex(modelHash) + ";" + System.getProperty("line.separator"));
@@ -104,8 +108,12 @@ public class BrokerProtocol {
     }
 
     public void process_GET_RESOURCE(String content) {
+
+        String hash = content.split(";")[0];
+        double latencyPrediction = Double.parseDouble(content.split(";")[1]);
+
         System.out.println("Adding Resource");
-        ConnectionPool.availibleResources.add(content);
+        ConnectionPool.availibleResources.addResource(hash, latencyPrediction);
         System.out.println("Added Resource");
         System.out.println(ConnectionPool.availibleResources.isEmpty());
     }
@@ -137,6 +145,7 @@ public class BrokerProtocol {
     }
 
     public static boolean downloadModel(String hash) {
+        System.out.println("Downloading Model: " + hash);
         boolean finished = false;
         try {
             FTPSClient ftpClient = new FTPSClient();
@@ -149,15 +158,21 @@ public class BrokerProtocol {
             ftpClient.changeWorkingDirectory("modelCache");
             System.out.print(ftpClient.getReplyString());
 
+            System.out.println(Arrays.toString(ftpClient.listFiles()));
+
+            System.out.print(ftpClient.getReplyString());
+
             long start = System.currentTimeMillis();
             ByteArrayOutputStream file = new ByteArrayOutputStream();
 
             finished = ftpClient.retrieveFile(hash, file);
+            System.out.print(ftpClient.getReplyString());
+
             byte[] fileArray = file.toByteArray();
+            System.out.println(fileArray.length);
+            System.out.println(ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)));
 
-            if (finished
-                    && ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)).equalsIgnoreCase(hash)) {
-
+            if (finished && ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)).equalsIgnoreCase(hash)) {
                 ConnectionPool.modelCache.put(ByteBuffer.wrap(ConnectionPool.hexToBytes(hash)), fileArray);
                 System.out.println(ftpClient.getReplyString());
                 System.out.println("Download Took: " + ((System.currentTimeMillis() - start) / 1000) + " seconds");
@@ -171,10 +186,13 @@ public class BrokerProtocol {
 
             // TODO add logic that throws out cached model if not enough memory
 
-        } catch (IOException e) {
+        } catch (
+
+        IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return finished;
     }
+
 }

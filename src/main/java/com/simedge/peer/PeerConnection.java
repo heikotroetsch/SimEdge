@@ -71,19 +71,24 @@ public class PeerConnection extends DrasylNode {
         if (event instanceof NodeOnlineEvent) {
             online.complete(null);
         } else if (event instanceof MessageEvent) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    PeerMessage peerMessage = new PeerMessage((byte[]) ((MessageEvent) event).getPayload());
 
-            PeerMessage peerMessage = new PeerMessage((byte[]) ((MessageEvent) event).getPayload());
+                    PeerProtocol.handleMessage(peerMessage,
+                            ((MessageEvent) event).getSender());
 
-            PeerProtocol.handleMessage(peerMessage,
-                    ((MessageEvent) event).getSender());
+                    if (peerMessage.messageType == PeerMessage.MessageType.RESULT) {
 
-            if (peerMessage.messageType == PeerMessage.MessageType.RESULT) {
+                        messageController.remove(peerMessage.messageNumber);
+                        System.out
+                                .println("remove from message Controller! \tFree:"
+                                        + (MAX_MESSAGES - messageController.size()));
 
-                messageController.remove(peerMessage.messageNumber);
-                System.out
-                        .println("remove from message Controller! \tFree:" + (MAX_MESSAGES - messageController.size()));
-            }
-
+                    }
+                }
+            }).start();
             /**
              * System.out.println("Got `" + ((MessageEvent) event).getPayload() + "` from `"
              * + ((MessageEvent) event).getSender() + "`");
@@ -93,6 +98,7 @@ public class PeerConnection extends DrasylNode {
              * });
              */
         }
+
     }
 
     public boolean sendMessage(String recipient_identity, PeerMessage peerMessage) {

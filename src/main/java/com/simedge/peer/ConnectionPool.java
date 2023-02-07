@@ -17,10 +17,11 @@ import org.drasyl.handler.PeersRttHandler.PeersRttReport;
 import org.drasyl.node.DrasylException;
 
 import com.simedge.broker.client.BrokerThread;
+import com.simedge.scheduling.LocalScheduler;
 import com.simedge.utils.LRUCache;
 
 public class ConnectionPool {
-    public static ConcurrentLinkedQueue<String> availibleResources = new ConcurrentLinkedQueue<String>();
+    public static LocalScheduler availibleResources = new LocalScheduler();
     public static LRUCache modelCache;
     public static PeerConnection node;
     public static BrokerThread brokerConnection;

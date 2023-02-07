@@ -26,6 +26,9 @@ public class PeerProtocol {
                     var model = ConnectionPool.modelCache.get(ByteBuffer.wrap(peerMessage.modelHash));
                     if (model == null) {
                         // if model is downloading message is thrown away
+                        ConnectionPool.node.sendResultMessage(source.toString(),
+                                new PeerMessage(ByteBuffer.allocate(0), 0L));
+
                         return;
                     }
                     runtime = new ONNXRuntime(model, peerMessage.indices, peerMessage.dataTye.getDataTypeSize());

@@ -55,15 +55,12 @@ public class SimEdgeAPI {
                 // TODO fix resource selection with peek. This must smartly get resources by
                 // best execution result
 
-                String LRU = ConnectionPool.availibleResources.peek();
-                if (ConnectionPool.node.peerAvailible(LRU)) {
-                    ConnectionPool.availibleResources.add(LRU);
-                    ConnectionPool.availibleResources.remove();
-
+                String scheduledResource = ConnectionPool.availibleResources.scheduleResource();
+                if (ConnectionPool.node.peerAvailible(scheduledResource)) {
                     PeerMessage message = new PeerMessage(PeerMessage.MessageType.EXECUTE, dType, inputData, modelHash,
                             dataInputName, indicies);
 
-                    ConnectionPool.node.sendMessage(LRU, message);
+                    ConnectionPool.node.sendMessage(scheduledResource, message);
                 }
 
             }
@@ -71,7 +68,7 @@ public class SimEdgeAPI {
 
     }
 
-    public byte[] commitModel(byte[] modelFile) throws NoSuchAlgorithmException {
+    public byte[] commitModel(byte[] modelFile, int numberResources) throws NoSuchAlgorithmException {
         ByteBuffer hash = ByteBuffer.wrap(md.digest(modelFile));
         ConnectionPool.modelCache.put(hash, modelFile);
         commitedModels.put(hash, new Boolean[] { false, false });
@@ -92,13 +89,13 @@ public class SimEdgeAPI {
         if (!commitedModels.get(hash)[1]) {
             System.out.println("Uploading the Model " + ConnectionPool.bytesToHex(hash.array()));
             uploadFile(ConnectionPool.bytesToHex(hash.array()), modelFile);
-            commitModel(modelFile);
+            commitModel(modelFile, numberResources);
         } else {
             // get resources with model
             System.out.println("Broker has the Model " + ConnectionPool.bytesToHex(hash.array()));
         }
 
-        ConnectionPool.brokerConnection.brokerProtocol.GET_RESOURCE();
+        ConnectionPool.brokerConnection.brokerProtocol.GET_RESOURCE(numberResources);
         return hash.array();
 
     }
@@ -158,7 +155,7 @@ public class SimEdgeAPI {
         try {
             byte[] model = FileUtils.readFileToByteArray(new File("ML_Models/net_combined_moves2coords.onnx"));
 
-            byte[] modelHash = api.commitModel(model);
+            byte[] modelHash = api.commitModel(model, 4);
             while (true) {
                 api.executeONNX(modelHash, "dense_input", movesbf.array(), PeerMessage.DataType.FLOAT, indices);
             }

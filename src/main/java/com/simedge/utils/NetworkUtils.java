@@ -16,7 +16,7 @@ public class NetworkUtils {
             // ping("http://" + url + ".blob.core.windows.net/probe/ping.js");
             // results.add((int) ping("http://" + url +
             // ".blob.core.windows.net/probe/ping.js"));
-            results.add(0);
+            results.add(1);
         }
         br.close();
         return results.toArray(new Integer[results.size()]);
