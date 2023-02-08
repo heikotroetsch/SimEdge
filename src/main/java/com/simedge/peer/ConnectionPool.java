@@ -21,7 +21,7 @@ import com.simedge.scheduling.LocalScheduler;
 import com.simedge.utils.LRUCache;
 
 public class ConnectionPool {
-    public static LocalScheduler availibleResources = new LocalScheduler();
+    public static LocalScheduler scheduler;
     public static LRUCache modelCache;
     public static PeerConnection node;
     public static BrokerThread brokerConnection;
@@ -61,6 +61,8 @@ public class ConnectionPool {
             }
         });
         Runtime.getRuntime().addShutdownHook(SystemExitHook);
+
+        scheduler = new LocalScheduler();
 
     }
 

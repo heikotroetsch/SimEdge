@@ -43,27 +43,13 @@ public class SimEdgeAPI {
 
     public void executeONNX(byte[] modelHash, String dataInputName, byte[] inputData, PeerMessage.DataType dType,
             int[] indicies) {
-        if (!ConnectionPool.node.fullMessageController()) {
-            // Only send if message controller has space
-            if (ConnectionPool.availibleResources.isEmpty()) {
-                if (ConnectionPool.node.peerAvailible(ConnectionPool.node.identity().getAddress().toString())) {
-                    PeerMessage message = new PeerMessage(PeerMessage.MessageType.EXECUTE, dType, inputData, modelHash,
-                            dataInputName, indicies);
-                    ConnectionPool.node.sendMessage(ConnectionPool.node.identity().getAddress().toString(), message);
-                }
-            } else {
-                // TODO fix resource selection with peek. This must smartly get resources by
-                // best execution result
 
-                String scheduledResource = ConnectionPool.availibleResources.scheduleResource();
-                if (ConnectionPool.node.peerAvailible(scheduledResource)) {
-                    PeerMessage message = new PeerMessage(PeerMessage.MessageType.EXECUTE, dType, inputData, modelHash,
-                            dataInputName, indicies);
+        String scheduledResource = ConnectionPool.scheduler.scheduleResource();
+        if (scheduledResource != null) {
+            PeerMessage message = new PeerMessage(PeerMessage.MessageType.EXECUTE, dType, inputData, modelHash,
+                    dataInputName, indicies);
 
-                    ConnectionPool.node.sendMessage(scheduledResource, message);
-                }
-
-            }
+            ConnectionPool.node.sendMessage(scheduledResource, message);
         }
 
     }
@@ -137,7 +123,7 @@ public class SimEdgeAPI {
         return finished;
     }
 
-    public static void mainold(String[] args) {
+    public static void main(String[] args) {
 
         int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
                 1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
@@ -157,6 +143,7 @@ public class SimEdgeAPI {
 
             byte[] modelHash = api.commitModel(model, 4);
             while (true) {
+
                 api.executeONNX(modelHash, "dense_input", movesbf.array(), PeerMessage.DataType.FLOAT, indices);
             }
 
@@ -170,7 +157,7 @@ public class SimEdgeAPI {
 
     }
 
-    public static void main(String[] args) {
+    public static void mainold(String[] args) {
         SimEdgeAPI api = new SimEdgeAPI(4, 1024);
 
     }

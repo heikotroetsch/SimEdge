@@ -105,8 +105,12 @@ public class PeerProtocol {
             // handle result
             ONNXRuntime.printFloatBuffer(ByteBuffer.wrap(peerMessage.data.array()).asFloatBuffer());
             System.out.println("Result Number: " + peerMessage.messageNumber);
-            ConnectionPool.node.updatePeerLastUsed(source.toString());
+            ConnectionPool.scheduler.updateMessageController(source, peerMessage);
 
+        } else if (peerMessage.messageType == PeerMessage.MessageType.PING) {
+            // handle PING by sending back result instantly
+            ConnectionPool.node.sendResultMessage(source.toString(),
+                    new PeerMessage(ByteBuffer.allocate(1), peerMessage.messageNumber));
         } else {
             System.out.println("No Peer message type type");
 

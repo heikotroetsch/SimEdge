@@ -6,12 +6,14 @@ import java.util.Arrays;
 
 import com.google.protobuf.Message;
 
+import io.netty.buffer.ByteBuf;
+
 public class PeerMessage {
 
     public enum MessageType {
         EXECUTE((byte) 1),
         RESULT((byte) 2),
-        UNKNOWN((byte) 0);
+        PING((byte) 0);
 
         private final byte id;
 
@@ -21,12 +23,14 @@ public class PeerMessage {
 
         public static MessageType processByte(byte b) {
             switch (b) {
+                case (byte) 0:
+                    return MessageType.PING;
                 case (byte) 1:
                     return MessageType.EXECUTE;
                 case (byte) 2:
                     return MessageType.RESULT;
                 default:
-                    return MessageType.UNKNOWN;
+                    return MessageType.PING;
             }
         }
     }
@@ -102,13 +106,17 @@ public class PeerMessage {
     int[] indices;
 
     public PeerMessage(byte[] packet) {
-
         data = ByteBuffer.allocate(packet.length);
+        // data = ByteBuffer.allocateDirect(packet.length);
 
         data.put(packet);
+
         data.position(0);
+
         this.messageNumber = data.getLong();
+
         System.out.println("Message Number: " + messageNumber);
+
         this.messageType = MessageType.processByte(data.get());
 
         if (messageType == MessageType.EXECUTE) {
@@ -133,10 +141,22 @@ public class PeerMessage {
 
         } else if (messageType == MessageType.RESULT) {
             System.out.println("Result with " + data.remaining() + " bytes received");
+        } else if (messageType == MessageType.PING) {
+            System.out.println("Ping Received");
         }
 
     }
 
+    /**
+     * Construct execute message
+     * 
+     * @param messageType
+     * @param dataType
+     * @param data
+     * @param modelHash
+     * @param inputName
+     * @param indices
+     */
     public PeerMessage(MessageType messageType, DataType dataType, byte[] data, byte[] modelHash,
             String inputName, int[] indices) {
         this.messageNumber = messageCounter;
@@ -152,15 +172,30 @@ public class PeerMessage {
         this.indices = indices;
     }
 
+    /**
+     * Construct a Result message
+     * 
+     * @param data
+     * @param messageNumber
+     */
     public PeerMessage(ByteBuffer data, long messageNumber) {
         this.messageNumber = messageNumber;
-        messageCounter++;
         this.messageType = MessageType.RESULT;
         this.data = data;
     }
 
-    public byte[] getMessageBytes() {
+    /**
+     * Construct a PING message
+     * 
+     * @param messageNumber
+     */
+    public PeerMessage(long messageNumber) {
+        this.messageNumber = messageNumber;
+        this.messageType = MessageType.RESULT;
+        this.data = ByteBuffer.allocate(1);
+    }
 
+    public byte[] getMessageBytes() {
         if (this.messageType == MessageType.EXECUTE) {
             ByteBuffer byteBuffer = ByteBuffer
                     .allocate(longLength + messageTypeLength + dataTypeLength + hashlength
@@ -180,13 +215,20 @@ public class PeerMessage {
             }
             data.position(0);
             byteBuffer.put(data);
-
             return byteBuffer.array();
         } else if (this.messageType == MessageType.RESULT) {
             ByteBuffer byteBuffer = ByteBuffer
                     .allocate(longLength + messageTypeLength + data.limit());
             byteBuffer.putLong(messageNumber);
             byteBuffer.put(messageType.id);
+            data.position(0);
+            byteBuffer.put(data);
+            return byteBuffer.array();
+        } else if (this.messageType == MessageType.PING) {
+            ByteBuffer byteBuffer = ByteBuffer
+                    .allocate(longLength + messageTypeLength + data.limit());
+            byteBuffer.putLong(messageNumber);
+            byteBuffer.put(MessageType.PING.id);
             data.position(0);
             byteBuffer.put(data);
             return byteBuffer.array();

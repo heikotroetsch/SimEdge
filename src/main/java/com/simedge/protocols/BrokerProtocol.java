@@ -113,9 +113,8 @@ public class BrokerProtocol {
         double latencyPrediction = Double.parseDouble(content.split(";")[1]);
 
         System.out.println("Adding Resource");
-        ConnectionPool.availibleResources.addResource(hash, latencyPrediction);
+        ConnectionPool.scheduler.addResource(hash, latencyPrediction);
         System.out.println("Added Resource");
-        System.out.println(ConnectionPool.availibleResources.isEmpty());
     }
 
     public void process_CHECK_MODEL(String content) {
