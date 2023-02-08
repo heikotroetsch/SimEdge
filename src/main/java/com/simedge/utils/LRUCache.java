@@ -57,7 +57,6 @@ public class LRUCache {
      * @return a ByteBuffer array with all hashes of the models that were evicted
      */
     public ByteBuffer[] put(ByteBuffer hash, byte[] model) {
-        System.out.println("PUT Function called \tModel Size: " + models.size() + "\t LRU Size: " + LRU.size());
         // if max memory is no enough for model update it to model size
         if (model.length > MAX_MEMORY) {
             MAX_MEMORY = model.length;
@@ -128,7 +127,6 @@ public class LRUCache {
      *         disk.
      */
     public byte[] get(ByteBuffer hash) {
-        System.out.println("GET Function called \tModel Size: " + models.size() + "\t LRU Size: " + LRU.size());
 
         byte[] data;
         // if model is present in cache than return bytes

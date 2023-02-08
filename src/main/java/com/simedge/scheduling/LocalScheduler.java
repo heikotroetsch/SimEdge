@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.drasyl.identity.DrasylAddress;
 
+import com.simedge.api.SimEdgeAPI;
 import com.simedge.peer.ConnectionPool;
 import com.simedge.protocols.PeerMessage;
 
@@ -17,7 +18,7 @@ public class LocalScheduler {
     private static final int MAX_MESSAGES = 1;
     private static final int TIMEOUT = 100;
 
-    private ArrayList<Double> probabilities = new ArrayList<Double>();
+    private ConcurrentHashMap<String, Double> probabilities = new ConcurrentHashMap<String, Double>();
     private ConcurrentHashMap<String, Double> RTT = new ConcurrentHashMap<String, Double>();
     private ArrayList<String> addresses = new ArrayList<String>();
 
@@ -44,9 +45,11 @@ public class LocalScheduler {
     public void removeResource(String address) {
         synchronized (addresses) {
             // 1. remove resource from List
-            int index = addresses.indexOf(address);
             RTT.remove(address);
-            probabilities.remove(index);
+            probabilities.remove(address);
+            peerLastUsed.remove(address);
+            messageControllers.remove(address);
+            addresses.remove(address);
             // 2. deregister resource from broker with updated RTT
             // TODO
             updateProbability();
@@ -60,6 +63,7 @@ public class LocalScheduler {
                 if (fullMessageController(ConnectionPool.node.identity().getAddress().toString())) {
                     return null;
                 } else {
+                    // return null;
                     return ConnectionPool.node.identity().getAddress().toString();
                 }
             }
@@ -68,16 +72,16 @@ public class LocalScheduler {
             double random = Math.random();
             double cumulativeProbability = 0.0;
             for (String address : addresses) {
-                cumulativeProbability += probabilities.get(addresses.indexOf(address));
+                cumulativeProbability += probabilities.get(address);
                 if (random <= cumulativeProbability) {
                     // only return address if peer is availible
                     if (peerAvailible(address) && !fullMessageController(address)) {
                         // if space free and avail return address selection
                         return address;
-                    } else if (!peerAvailible(address) && peerLastUsed.get(address) != -1) {
-                        // if peer timed out remove peer.
-                        removeResource(address);
-                    }
+                    } // else if (!peerAvailible(address) && peerLastUsed.get(address) != -1) {
+                      // if peer timed out remove peer.
+                      // removeResource(address);
+                      // }
                     /*
                      * else if (peerAvailible(address) && fullMessageController(address)) {
                      * // if message controller full reschedule
@@ -93,30 +97,34 @@ public class LocalScheduler {
 
         }
         // if all fails return local node address
-        System.err.println("Local Node address used as backup. Check Local Scheduler!!!s");
-        return ConnectionPool.node.identity().getAddress().toString();
+        // System.err.println("Local Node address used as backup. Check Local
+        // Scheduler!!!s");
+        // return ConnectionPool.node.identity().getAddress().toString();
+        return null;
     }
 
     private void updateProbability() {
-        synchronized (addresses) {
-            double sum = RTT.values().stream().mapToDouble(Double::doubleValue).sum();
-            probabilities.clear();
-            double sumBalance = 0;
-            for (Double rtt : RTT.values()) {
-                sumBalance += sum / rtt;
-            }
-
-            for (Double rtt : RTT.values()) {
-                probabilities.add((sum / rtt) / sumBalance);
-            }
+        double sum = RTT.values().stream().mapToDouble(Double::doubleValue).sum();
+        probabilities.clear();
+        double sumBalance = 0;
+        for (Double rtt : RTT.values()) {
+            sumBalance += sum / rtt;
         }
+
+        for (var rtt : RTT.entrySet()) {
+            probabilities.put(rtt.getKey(), (sum / rtt.getValue()) / sumBalance);
+        }
+
         System.out.println(probabilities.toString());
     }
 
-    public void updateRTTAvarage(String address, int rtt) {
+    public void updateRTTAvarage(String address, double rtt) {
         synchronized (addresses) {
-            RTT.put(address, RTT.get(address) * 0.9 + rtt * 0.1);
-            updateProbability();
+            if (!address.equals(ConnectionPool.node.identity().getAddress().toString())) {
+                RTT.put(address, RTT.get(address) * 0.9 + rtt * 0.1);
+                updateProbability();
+            }
+
         }
     }
 
@@ -176,20 +184,34 @@ public class LocalScheduler {
     }
 
     public void updateMessageController(DrasylAddress source, PeerMessage peerMessage) {
-        if (peerMessage.messageNumber == -1 && !source.equals(ConnectionPool.node.identity().getAddress())) {
-            addresses.add(source.toString());
-            updateProbability();
+        synchronized (addresses) {
+            if (peerMessage.messageNumber == -1 && !source.equals(ConnectionPool.node.identity().getAddress())) {
+                addresses.add(source.toString());
+                updateProbability();
+
+            }
+
+            // logging
+            SimEdgeAPI.logger.toWrite
+                    .add(ConnectionPool.node.identity().getAddress().toString() + ";" + source.toString() + ";"
+                            + peerMessage.onnxTime + ";" + (System.currentTimeMillis()
+                                    - messageControllers.get(source.toString()).get(peerMessage.messageNumber))
+                            + ";" + peerMessage.messageNumber);
+            System.out
+                    .println("Result Message Number: \t"
+                            + peerMessage.messageNumber + "\t\tEntire execution cost: "
+                            + (System.currentTimeMillis()
+                                    - messageControllers.get(source.toString()).get(peerMessage.messageNumber))
+                            + "ms");
+
+            updateRTTAvarage(source.toString(), (System.currentTimeMillis()
+                    - messageControllers.get(source.toString()).get(peerMessage.messageNumber)) - peerMessage.onnxTime);
+
+            messageControllers.get(source.toString()).remove(peerMessage.messageNumber);
+
+            updatePeerLastUsed(source.toString());
 
         }
-        System.out
-                .println("Entire execution cost: "
-                        + (System.currentTimeMillis()
-                                - messageControllers.get(source.toString()).get(peerMessage.messageNumber))
-                        + "ms\t\t"
-                        + peerMessage.messageNumber);
-
-        messageControllers.get(source.toString()).remove(peerMessage.messageNumber);
-        updatePeerLastUsed(source.toString());
 
     }
 

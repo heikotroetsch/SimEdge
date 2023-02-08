@@ -78,8 +78,6 @@ public class PeerConnection extends DrasylNode {
 
             if (peerMessage.messageType == PeerMessage.MessageType.RESULT) {
                 resultQuant++;
-                System.out.println("Number of Result messages " + resultQuant);
-
             }
 
             /**
@@ -95,10 +93,9 @@ public class PeerConnection extends DrasylNode {
     }
 
     public void sendMessage(String recipient_identity, PeerMessage peerMessage) {
-
-        System.out.println("Sending to " + recipient_identity + "\t" + peerMessage.messageNumber);
-        System.out.println(recipient_identity);
-        System.out.println(Arrays.toString(peerMessage.getMessageBytes()));
+        System.out
+                .println("Sent Message Number: \t"
+                        + peerMessage.messageNumber + "\t\tSending to " + recipient_identity);
         ConnectionPool.scheduler.addToMessageController(recipient_identity, peerMessage.messageNumber);
 
         this.send(recipient_identity, peerMessage.getMessageBytes()).exceptionally(e -> {

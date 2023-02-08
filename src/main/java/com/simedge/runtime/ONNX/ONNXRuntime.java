@@ -75,9 +75,7 @@ public class ONNXRuntime {
     public ByteBuffer execute(Map<String, OnnxTensor> dense_input)
             throws OrtException {
 
-        long start = System.currentTimeMillis();
         try (Result results = session.run(dense_input)) {
-            System.out.println("Onnx took: " + (System.currentTimeMillis() - start) + "ms");
             Map<String, ByteBuffer> dense_output = new HashMap<String, ByteBuffer>();
 
             // put the results in a reusable map of OnnxTensors.
@@ -94,42 +92,45 @@ public class ONNXRuntime {
 
     }
 
-    public static void main(String[] args) {
-        try {
-
-            int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
-                    1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
-                    1742, 2139, 2227, 2487, 2514,
-                    2547, 2586, 2619 };
-
-            ONNXRuntime runtime = new ONNXRuntime(
-                    FileUtils.readFileToByteArray(
-                            new File("modelCache/baed48a5c57c26eb7efc412cfd26ca6e379e86e3")),
-                    indices, 4);
-
-            float[] moves = new float[] { 3.895135498046875000e+01f,
-                    3.025833129882812500e+02f, 3.746795654296875000e+02f, 0f };
-
-            var input_tensor = OnnxTensor.createTensor(runtime.env, new float[][] { moves });
-            Map<String, OnnxTensor> dense_input = Map.of("dense_input", input_tensor);
-            ByteBuffer results;
-            results = runtime.execute(dense_input);
-            if (results.limit() == 1) {
-                System.out.print(ONNXRuntime.Error.messageOf(results.get()));
-            } else {
-                printFloatBuffer(results.asFloatBuffer());
-            }
-
-        } catch (OrtException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
-    }
-
+    /*
+     * public static void main(String[] args) {
+     * try {
+     * 
+     * int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086,
+     * 1107,
+     * 1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
+     * 1742, 2139, 2227, 2487, 2514,
+     * 2547, 2586, 2619 };
+     * 
+     * ONNXRuntime runtime = new ONNXRuntime(
+     * FileUtils.readFileToByteArray(
+     * new File("modelCache/baed48a5c57c26eb7efc412cfd26ca6e379e86e3")),
+     * indices, 4);
+     * 
+     * float[] moves = new float[] { 3.895135498046875000e+01f,
+     * 3.025833129882812500e+02f, 3.746795654296875000e+02f, 0f };
+     * 
+     * var input_tensor = OnnxTensor.createTensor(runtime.env, new float[][] { moves
+     * });
+     * Map<String, OnnxTensor> dense_input = Map.of("dense_input", input_tensor);
+     * ByteBuffer results;
+     * results = runtime.execute(dense_input);
+     * if (results.limit() == 1) {
+     * System.out.print(ONNXRuntime.Error.messageOf(results.get()));
+     * } else {
+     * printFloatBuffer(results.asFloatBuffer());
+     * }
+     * 
+     * } catch (OrtException e) {
+     * // TODO Auto-generated catch block
+     * e.printStackTrace();
+     * } catch (IOException e) {
+     * // TODO Auto-generated catch block
+     * e.printStackTrace();
+     * }
+     * 
+     * }
+     */
     // utils
 
     private static ByteBuffer reduceResults(int[] indicies, Map<String, ByteBuffer> results, int dataTypeSize) {

@@ -76,7 +76,6 @@ public class BrokerProtocol {
     }
 
     public void MODEL_CACHED(byte[] modelHash) {
-        System.out.println("WHATTHEFUCK");
         System.out.println("Hashlength: " + modelHash.length);
         source.messageQueue
                 .add(MODEL_CACHED + ConnectionPool.bytesToHex(modelHash) + ";" + System.getProperty("line.separator"));

@@ -21,6 +21,7 @@ import org.apache.commons.net.ftp.FTPSClient;
 import org.drasyl.node.event.Peer;
 
 import com.google.protobuf.Message;
+import com.simedge.logger.Logger;
 import com.simedge.peer.ConnectionPool;
 import com.simedge.protocols.PeerMessage;
 
@@ -29,8 +30,17 @@ public class SimEdgeAPI {
     public static MessageDigest md;
 
     private static ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels = new ConcurrentHashMap<ByteBuffer, Boolean[]>();
+    public static Logger logger = null;
 
     public SimEdgeAPI(int resources, int MAX_MEMORY_MB) {
+        try {
+            logger = new Logger();
+            logger.start();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
         ConnectionPool.initPeer(resources, MAX_MEMORY_MB * 1000000, commitedModels);
         try {
 
@@ -63,8 +73,6 @@ public class SimEdgeAPI {
 
         // Wait while broker is checking if model is present
         while (!commitedModels.get(hash)[0]) {
-            System.out.println(Arrays.toString(commitedModels.get(hash)));
-            System.out.println(commitedModels.size());
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {

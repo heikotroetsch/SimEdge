@@ -5,6 +5,8 @@ import java.util.Map;
 
 import org.drasyl.identity.DrasylAddress;
 
+import com.simedge.api.SimEdgeAPI;
+import com.simedge.logger.Logger;
 import com.simedge.peer.ConnectionPool;
 import com.simedge.peer.PeerConnection;
 import com.simedge.runtime.ONNX.ONNXRuntime;
@@ -27,13 +29,14 @@ public class PeerProtocol {
                     if (model == null) {
                         // if model is downloading message is thrown away
                         ConnectionPool.node.sendResultMessage(source.toString(),
-                                new PeerMessage(ByteBuffer.allocate(0), 0L));
+                                new PeerMessage(ByteBuffer.allocate(0), 0L, 0L));
 
                         return;
                     }
                     runtime = new ONNXRuntime(model, peerMessage.indices, peerMessage.dataTye.getDataTypeSize());
                     ConnectionPool.modelCache.putONNXRuntime(ByteBuffer.wrap(peerMessage.modelHash), runtime);
                 }
+                long start = System.currentTimeMillis();
 
                 OnnxTensor input_tensor;
                 switch (peerMessage.dataTye) {
@@ -90,11 +93,11 @@ public class PeerProtocol {
                 }
 
                 Map<String, OnnxTensor> dense_input = Map.of(peerMessage.inputName, input_tensor);
-
                 results = runtime.execute(dense_input);
                 System.out.println("Sending results  to: " + source.toString());
+
                 ConnectionPool.node.sendResultMessage(source.toString(),
-                        new PeerMessage(results, peerMessage.messageNumber));
+                        new PeerMessage(results, peerMessage.messageNumber, (System.currentTimeMillis() - start)));
 
             } catch (OrtException e) {
                 // TODO Auto-generated catch block
@@ -103,14 +106,13 @@ public class PeerProtocol {
 
         } else if (peerMessage.messageType == PeerMessage.MessageType.RESULT) {
             // handle result
-            ONNXRuntime.printFloatBuffer(ByteBuffer.wrap(peerMessage.data.array()).asFloatBuffer());
-            System.out.println("Result Number: " + peerMessage.messageNumber);
+            // ONNXRuntime.printFloatBuffer(ByteBuffer.wrap(peerMessage.data.array()).asFloatBuffer());
             ConnectionPool.scheduler.updateMessageController(source, peerMessage);
 
         } else if (peerMessage.messageType == PeerMessage.MessageType.PING) {
             // handle PING by sending back result instantly
             ConnectionPool.node.sendResultMessage(source.toString(),
-                    new PeerMessage(ByteBuffer.allocate(1), peerMessage.messageNumber));
+                    new PeerMessage(ByteBuffer.allocate(1), peerMessage.messageNumber, 0L));
         } else {
             System.out.println("No Peer message type type");
 

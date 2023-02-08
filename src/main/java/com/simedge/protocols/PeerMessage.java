@@ -104,6 +104,7 @@ public class PeerMessage {
     String inputName;
     int indicesLength;
     int[] indices;
+    public long onnxTime;
 
     public PeerMessage(byte[] packet) {
         data = ByteBuffer.allocate(packet.length);
@@ -114,8 +115,6 @@ public class PeerMessage {
         data.position(0);
 
         this.messageNumber = data.getLong();
-
-        System.out.println("Message Number: " + messageNumber);
 
         this.messageType = MessageType.processByte(data.get());
 
@@ -140,6 +139,7 @@ public class PeerMessage {
             }
 
         } else if (messageType == MessageType.RESULT) {
+            this.onnxTime = data.getLong();
             System.out.println("Result with " + data.remaining() + " bytes received");
         } else if (messageType == MessageType.PING) {
             System.out.println("Ping Received");
@@ -178,10 +178,11 @@ public class PeerMessage {
      * @param data
      * @param messageNumber
      */
-    public PeerMessage(ByteBuffer data, long messageNumber) {
+    public PeerMessage(ByteBuffer data, long messageNumber, long onnxTime) {
         this.messageNumber = messageNumber;
         this.messageType = MessageType.RESULT;
         this.data = data;
+        this.onnxTime = onnxTime;
     }
 
     /**
@@ -191,7 +192,7 @@ public class PeerMessage {
      */
     public PeerMessage(long messageNumber) {
         this.messageNumber = messageNumber;
-        this.messageType = MessageType.RESULT;
+        this.messageType = MessageType.PING;
         this.data = ByteBuffer.allocate(1);
     }
 
@@ -218,9 +219,10 @@ public class PeerMessage {
             return byteBuffer.array();
         } else if (this.messageType == MessageType.RESULT) {
             ByteBuffer byteBuffer = ByteBuffer
-                    .allocate(longLength + messageTypeLength + data.limit());
+                    .allocate(longLength + messageTypeLength + longLength + data.limit());
             byteBuffer.putLong(messageNumber);
             byteBuffer.put(messageType.id);
+            byteBuffer.putLong(onnxTime);
             data.position(0);
             byteBuffer.put(data);
             return byteBuffer.array();
