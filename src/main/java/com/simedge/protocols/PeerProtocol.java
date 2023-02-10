@@ -10,6 +10,7 @@ import com.simedge.logger.Logger;
 import com.simedge.peer.ConnectionPool;
 import com.simedge.peer.PeerConnection;
 import com.simedge.runtime.ONNX.ONNXRuntime;
+import com.simedge.scheduling.LocalScheduler;
 
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtException;
@@ -96,8 +97,10 @@ public class PeerProtocol {
                 results = runtime.execute(dense_input);
                 System.out.println("Sending results  to: " + source.toString());
 
-                ConnectionPool.node.sendResultMessage(source.toString(),
-                        new PeerMessage(results, peerMessage.messageNumber, (System.currentTimeMillis() - start)));
+                if ((System.currentTimeMillis() - start) < LocalScheduler.TIMEOUT) {
+                    ConnectionPool.node.sendResultMessage(source.toString(),
+                            new PeerMessage(results, peerMessage.messageNumber, (System.currentTimeMillis() - start)));
+                }
 
             } catch (OrtException e) {
                 // TODO Auto-generated catch block

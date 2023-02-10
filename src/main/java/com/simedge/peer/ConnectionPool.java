@@ -52,7 +52,9 @@ public class ConnectionPool {
         Thread SystemExitHook = new Thread(() -> {
             System.out.println("Shutting down and saving cache to disk");
             try {
-                Thread.sleep(5000);
+                Thread.sleep(100);
+                node.shutdown();
+                scheduler.returnAllResources();
                 modelCache.saveModelChacheToDisk();
             } catch (IOException e) {
                 System.err.println("File problems during cache save to disk");

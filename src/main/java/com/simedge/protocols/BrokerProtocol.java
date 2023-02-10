@@ -65,8 +65,9 @@ public class BrokerProtocol {
         source.messageQueue.add(GET_RESOURCE + "" + numberResources + ";" + System.getProperty("line.separator"));
     }
 
-    public void RETURN_RESOURCE(String resourceIdentity) {
-        source.messageQueue.add(RETURN_RESOURCE + resourceIdentity + ";" + System.getProperty("line.separator"));
+    public void RETURN_RESOURCE(String resourceIdentity, double rtt) {
+        source.messageQueue
+                .add(RETURN_RESOURCE + resourceIdentity + ";" + rtt + ";" + System.getProperty("line.separator"));
     }
 
     public void CHECK_MODEL(byte[] modelHash) {
@@ -114,6 +115,12 @@ public class BrokerProtocol {
         System.out.println("Adding Resource");
         ConnectionPool.scheduler.addResource(hash, latencyPrediction);
         System.out.println("Added Resource");
+    }
+
+    public void process_RETURN_RESOURCE(String content) {
+        // broker notification that resource has left.
+        // Removes resource from scheduler so it is no longer sent to.
+        ConnectionPool.scheduler.removeResource(content);
     }
 
     public void process_CHECK_MODEL(String content) {

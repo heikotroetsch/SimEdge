@@ -49,50 +49,87 @@ public class BrokerThread extends Thread {
     }
 
     public void run() {
-        try {
-            do {
-                if (stop) {
-                    break;
-                }
-
-                if (reader.ready()) {
-                    // reads message type and content. Content is null if empty.
-                    int messageType = reader.read() - 48; // 48 is the char number for 0
-                    System.out.println("Message Type Received: " + messageType);
-                    String content = reader.readLine();
-                    System.out.println("Message Received: " + content);
-                    System.out.println("message type: " + messageType + " content: " + content);
-                    // handle message
-                    handleMessage(messageType, content);
-                }
-
-                // if write queue is filled write message
-                if (!messageQueue.isEmpty()) {
-                    System.out.println("message in queue");
-                    String message = messageQueue.poll();
-                    writer.write(message);
-                    writer.flush();
-
-                    System.out.println("message sent: " + message);
-                }
-
+        // thread for reading from socket
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
                 try {
-                    BrokerThread.sleep(50);
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    do {
+                        if (stop) {
+                            break;
+                        }
+
+                        if (reader.ready()) {
+                            // reads message type and content. Content is null if empty.
+                            int messageType = reader.read() - 48; // 48 is the char number for 0
+                            System.out.println("Message Type Received: " + messageType);
+                            String content = reader.readLine();
+                            System.out.println("Message Received: " + content);
+                            System.out.println("message type: " + messageType + " content: " + content);
+                            // handle message
+                            handleMessage(messageType, content);
+                        }
+
+                        // try {
+                        // BrokerThread.sleep(50);
+                        // } catch (InterruptedException e) {
+                        // // TODO Auto-generated catch block
+                        // e.printStackTrace();
+                        // }
+
+                    } while (!stop);
+
+                    socket.close();
+                } catch (IOException e) {
+                    System.out.println("Server exception: " + e.getMessage());
+                    shutdown();
+                } catch (NullPointerException e) {
+                    System.out.println("Shutting down broker Connection");
+                    shutdown();
                 }
 
-            } while (!stop);
+            }
+        }).start();
 
-            socket.close();
-        } catch (IOException e) {
-            System.out.println("Server exception: " + e.getMessage());
-            shutdown();
-        } catch (NullPointerException e) {
-            System.out.println("Shutting down broker Connection");
-            shutdown();
-        }
+        // thread for write to socket
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    do {
+                        if (stop) {
+                            break;
+                        }
+                        // if write queue is filled write message
+                        if (!messageQueue.isEmpty()) {
+                            System.out.println("message in queue");
+                            String message = messageQueue.poll();
+                            writer.write(message);
+                            writer.flush();
+
+                            System.out.println("message sent: " + message);
+                        }
+
+                        try {
+                            BrokerThread.sleep(50);
+                        } catch (InterruptedException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+
+                    } while (!stop);
+
+                    socket.close();
+                } catch (IOException e) {
+                    System.out.println("Server exception: " + e.getMessage());
+                    shutdown();
+                } catch (NullPointerException e) {
+                    System.out.println("Shutting down broker Connection");
+                    shutdown();
+                }
+
+            }
+        }).start();
     }
 
     public void shutdown() {
@@ -114,6 +151,9 @@ public class BrokerThread extends Thread {
                 brokerProtocol.process_GET_RESOURCE(content);
                 break;
 
+            case BrokerProtocol.RETURN_RESOURCE:
+                brokerProtocol.process_RETURN_RESOURCE(content);
+                break;
             case BrokerProtocol.SET_PING:
                 brokerProtocol.process_SET_PING(content);
                 break;
