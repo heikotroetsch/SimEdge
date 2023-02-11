@@ -190,10 +190,10 @@ public class PeerMessage {
      * 
      * @param messageNumber
      */
-    public PeerMessage(long messageNumber) {
+    public PeerMessage(long messageNumber, byte[] modelHash) {
         this.messageNumber = messageNumber;
         this.messageType = MessageType.PING;
-        this.data = ByteBuffer.allocate(1);
+        this.modelHash = modelHash;
     }
 
     public byte[] getMessageBytes() {
@@ -228,11 +228,10 @@ public class PeerMessage {
             return byteBuffer.array();
         } else if (this.messageType == MessageType.PING) {
             ByteBuffer byteBuffer = ByteBuffer
-                    .allocate(longLength + messageTypeLength + data.limit());
+                    .allocate(longLength + messageTypeLength + hashlength);
             byteBuffer.putLong(messageNumber);
             byteBuffer.put(MessageType.PING.id);
-            data.position(0);
-            byteBuffer.put(data);
+            byteBuffer.put(modelHash);
             return byteBuffer.array();
         } else {
             return ByteBuffer.allocate(1).array();

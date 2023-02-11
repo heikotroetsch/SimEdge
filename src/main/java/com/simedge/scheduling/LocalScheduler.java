@@ -7,7 +7,9 @@ import org.drasyl.identity.DrasylAddress;
 
 import com.simedge.api.SimEdgeAPI;
 import com.simedge.peer.ConnectionPool;
+import com.simedge.protocols.BrokerProtocol;
 import com.simedge.protocols.PeerMessage;
+import com.simedge.utils.LRUCache;
 
 public class LocalScheduler {
 
@@ -36,7 +38,9 @@ public class LocalScheduler {
             // add resource to list
             RTT.put(address, latencyPrediction);
             executionTimes.put(address, latencyPrediction);
-            pingResource(address);
+            for (var model : ConnectionPool.brokerConnection.brokerProtocol.getCommitedModels()) {
+                pingResource(address, model.array());
+            }
             /*
              * Add adress and update probability only when ping is received
              * addresses.add(address);
@@ -224,13 +228,13 @@ public class LocalScheduler {
      * 
      * @param address
      */
-    private void pingResource(String address) {
+    private void pingResource(String address, byte[] modelHash) {
         System.out.println("Sending first Message to Peer: " + address);
 
         peerLastUsed.put(address, -1L);
         messageControllers.put(address, new ConcurrentHashMap<Long, Long>());
         messageControllers.get(address).put(-1L, System.currentTimeMillis());
-        ConnectionPool.node.sendMessage(address, new PeerMessage(-1));
+        ConnectionPool.node.sendMessage(address, new PeerMessage(-1, modelHash));
     }
 
     private void updatePeerLastUsed(String peer) {

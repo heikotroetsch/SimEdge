@@ -7,7 +7,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap.KeySetView;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.ftp.FTP;
@@ -43,6 +46,7 @@ public class BrokerProtocol {
     public BrokerProtocol(BrokerThread source, ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels) {
         this.source = source;
         this.commitedModels = commitedModels;
+
     }
 
     // Sending messages
@@ -65,7 +69,8 @@ public class BrokerProtocol {
     }
 
     public void GET_RESOURCE(int numberResources) {
-        source.messageQueue.add(GET_RESOURCE + "" + numberResources + ";" + System.getProperty("line.separator"));
+        source.messageQueue.add(GET_RESOURCE + "" + numberResources + ";"
+                + System.getProperty("line.separator"));
     }
 
     public void RETURN_RESOURCE(String resourceIdentity, double rtt) {
@@ -114,11 +119,11 @@ public class BrokerProtocol {
 
     public void process_GET_RESOURCE(String content) {
 
-        String hash = content.split(";")[0];
+        String resourcehash = content.split(";")[0];
         double latencyPrediction = Double.parseDouble(content.split(";")[1]);
 
         System.out.println("Adding Resource");
-        ConnectionPool.scheduler.addResource(hash, latencyPrediction);
+        ConnectionPool.scheduler.addResource(resourcehash, latencyPrediction);
         System.out.println("Added Resource");
     }
 
@@ -205,6 +210,10 @@ public class BrokerProtocol {
             e.printStackTrace();
         }
         return finished;
+    }
+
+    public KeySetView<ByteBuffer, Boolean[]> getCommitedModels() {
+        return commitedModels.keySet();
     }
 
 }

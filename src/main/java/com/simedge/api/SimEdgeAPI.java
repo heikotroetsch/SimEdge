@@ -125,10 +125,10 @@ public class SimEdgeAPI {
             System.out.print(ftpClient.getReplyString());
             ftpClient.enterLocalPassiveMode();
 
-            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+            ftpClient.login("simedge", "hte^W9k$DaZ@ep^q3%b1^A9h6g");
             System.out.print(ftpClient.getReplyString());
 
-            ftpClient.login("simedge", "hte^W9k$DaZ@ep^q3%b1^A9h6g");
+            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
             System.out.print(ftpClient.getReplyString());
 
             ftpClient.changeWorkingDirectory("modelCache");
