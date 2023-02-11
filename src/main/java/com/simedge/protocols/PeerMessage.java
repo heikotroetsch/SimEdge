@@ -143,6 +143,10 @@ public class PeerMessage {
             System.out.println("Result with " + data.remaining() + " bytes received");
         } else if (messageType == MessageType.PING) {
             System.out.println("Ping Received");
+            modelHash = new byte[hashlength];
+            for (int i = 0; i < modelHash.length; i++) {
+                modelHash[i] = data.get();
+            }
         }
 
     }
