@@ -68,6 +68,8 @@ public class BrokerProtocol {
     public void RETURN_RESOURCE(String resourceIdentity, double rtt) {
         source.messageQueue
                 .add(RETURN_RESOURCE + resourceIdentity + ";" + rtt + ";" + System.getProperty("line.separator"));
+        System.out.println("Scheduler: Returned resource: " + resourceIdentity + "\t" + rtt);
+
     }
 
     public void CHECK_MODEL(byte[] modelHash) {

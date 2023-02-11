@@ -9,8 +9,6 @@ import com.simedge.api.SimEdgeAPI;
 import com.simedge.peer.ConnectionPool;
 import com.simedge.protocols.PeerMessage;
 
-import io.netty.util.Timeout;
-
 public class LocalScheduler {
 
     private ConcurrentHashMap<String, Long> peerLastUsed = new ConcurrentHashMap<String, Long>();
@@ -19,6 +17,7 @@ public class LocalScheduler {
     // ConcurrentHashMap<Long, Long>();
     private static final int MAX_MESSAGES = 1;
     public static final int TIMEOUT = 100;
+    private static boolean stop = false;
 
     private ConcurrentHashMap<String, Double> probabilities = new ConcurrentHashMap<String, Double>();
     private ConcurrentHashMap<String, Double> RTT = new ConcurrentHashMap<String, Double>();
@@ -48,27 +47,37 @@ public class LocalScheduler {
     }
 
     public void returnAllResources() {
+        stop = true;
+        var localAdresses = new ArrayList<String>();
         for (var address : addresses) {
+            localAdresses.add(address);
+        }
+        for (var address : localAdresses) {
             removeResource(address);
         }
     }
 
     public void removeResource(String address) {
         synchronized (addresses) {
-            // 1. remove resource from List
+            // 1. deregister resource from broker with updated RTT
+            ConnectionPool.brokerConnection.brokerProtocol.RETURN_RESOURCE(address, RTT.get(address));
+            // 2. remove resource from List
             RTT.remove(address);
             executionTimes.remove(address);
             probabilities.remove(address);
             peerLastUsed.remove(address);
             messageControllers.remove(address);
             addresses.remove(address);
-            // 2. deregister resource from broker with updated RTT
-            ConnectionPool.brokerConnection.brokerProtocol.RETURN_RESOURCE(address, RTT.get(address));
+
             updateProbability();
         }
     }
 
     public String scheduleResource() {
+        if (stop) {
+            return null;
+        }
+
         synchronized (addresses) {
             // Return local node address if waiting for resources or nothing availible
             if (addresses.isEmpty()) {
@@ -90,8 +99,6 @@ public class LocalScheduler {
                     if (peerAvailible(address) && !fullMessageController(address)) {
                         // if space free and avail return address selection
                         return address;
-                    } else if ((RTT.get(address) + executionTimes.get(address)) > TIMEOUT) {
-                        // TODO evict if more than x messages later then TIMEOUT
                     }
 
                     // else if (!peerAvailible(address) && peerLastUsed.get(address) != -1) {
@@ -169,17 +176,46 @@ public class LocalScheduler {
     }
 
     private synchronized void cleanUpMessages(String hash) {
+        boolean hadToCleanUp = false;
         if (peerLastUsed.get(hash) != -1) {
             // only clean message controller if not waiting on first message from resource
             long time = System.currentTimeMillis();
             for (var v : messageControllers.get(hash).entrySet()) {
                 if (v.getValue() + TIMEOUT < time) {
+                    hadToCleanUp = true;
                     System.out.println("CLEANING EXPIRED MESSAGE: " + v.getKey());
                     messageControllers.get(hash).remove(v.getKey());
                 }
             }
+
+            if (hadToCleanUp) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        evictTimedOutResources();
+                    }
+                }).start();
+            }
+
         }
 
+    }
+
+    private void evictTimedOutResources() {
+        synchronized (addresses) {
+            // every 100 messages check and remove resources that avarage more than a
+            // timeout which reschedules a resource
+            var localAdresses = new ArrayList<String>();
+            // first duplicate addresses to prevent concurrency problem
+            for (var address : addresses) {
+                localAdresses.add(address);
+            }
+            for (String address : localAdresses) {
+                if (peerAvailible(address) && ((RTT.get(address) + executionTimes.get(address)) > TIMEOUT)) {
+                    removeResource(address);
+                }
+            }
+        }
     }
 
     /**

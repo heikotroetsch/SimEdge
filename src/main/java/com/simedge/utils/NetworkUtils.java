@@ -13,10 +13,8 @@ public class NetworkUtils {
         String url;
         LinkedList<Integer> results = new LinkedList<Integer>();
         while ((url = br.readLine()) != null) {
-            // ping("http://" + url + ".blob.core.windows.net/probe/ping.js");
-            // results.add((int) ping("http://" + url +
-            // ".blob.core.windows.net/probe/ping.js"));
-            results.add(1);
+            ping("http://" + url + ".blob.core.windows.net/probe/ping.js");
+            results.add((int) ping("http://" + url + ".blob.core.windows.net/probe/ping.js"));
         }
         br.close();
         return results.toArray(new Integer[results.size()]);

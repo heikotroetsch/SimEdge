@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import javax.swing.plaf.synth.SynthOptionPaneUI;
+
 import org.apache.commons.io.FileUtils;
 import org.drasyl.handler.PeersRttHandler;
 import org.drasyl.handler.PeersRttHandler.PeerRtt;
@@ -50,16 +52,18 @@ public class ConnectionPool {
         // brokerConnection.brokerProtocol.GET_RESOURCE();
 
         Thread SystemExitHook = new Thread(() -> {
-            System.out.println("Shutting down and saving cache to disk");
+            System.out.println("Shutting down");
             try {
                 Thread.sleep(100);
-                node.shutdown();
+                System.out.println("Scheduler: Schutting down - Returning resources");
                 scheduler.returnAllResources();
+                System.out.println("Model Cache: Saving cache to disk");
                 modelCache.saveModelChacheToDisk();
+
             } catch (IOException e) {
                 System.err.println("File problems during cache save to disk");
             } catch (Exception e) {
-
+                e.printStackTrace();
             }
         });
         Runtime.getRuntime().addShutdownHook(SystemExitHook);
