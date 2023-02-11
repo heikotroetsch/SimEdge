@@ -162,12 +162,12 @@ public class BrokerProtocol {
             ftpClient.connect("134.155.108.108", 2021);
             ftpClient.enterLocalPassiveMode();
 
-            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
             ftpClient.login("simedge", "hte^W9k$DaZ@ep^q3%b1^A9h6g");
             System.out.print(ftpClient.getReplyString());
 
             ftpClient.changeWorkingDirectory("modelCache");
             System.out.print(ftpClient.getReplyString());
+            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
 
             System.out.println(Arrays.toString(ftpClient.listFiles()));
 
@@ -180,7 +180,6 @@ public class BrokerProtocol {
             finished = ftpClient.retrieveFile(hash, outputStream);
             outputStream.close();
             System.out.print(ftpClient.getReplyString());
-
             byte[] fileArray = FileUtils.readFileToByteArray(new File("modelCache/" + hash));
             System.out.println(fileArray.length);
             System.out.println(ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)));
