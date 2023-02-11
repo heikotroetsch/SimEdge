@@ -74,6 +74,17 @@ public class SimEdgeAPI {
 
     }
 
+    /**
+     * Commits a onnx model to the system. If the model has not been commited to the
+     * broker yet it will be uploaded to the repository. Otherwise it will be
+     * downloaded by clients who require it.
+     * 
+     * @param modelFile       the model file to be comitted
+     * @param numberResources the number of resources that should be prepared to
+     *                        execute the model
+     * @return returns the has of the model that can be used for the exection
+     * @throws NoSuchAlgorithmException
+     */
     public byte[] commitModel(byte[] modelFile, int numberResources) throws NoSuchAlgorithmException {
         ByteBuffer hash = ByteBuffer.wrap(md.digest(modelFile));
         ConnectionPool.modelCache.put(hash, modelFile);
