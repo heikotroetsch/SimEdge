@@ -115,9 +115,7 @@ public class PeerProtocol {
 
         } else if (peerMessage.messageType == PeerMessage.MessageType.PING) {
             // handle PING by sending back result instantly
-            if (!ConnectionPool.modelCache.hasModel(peerMessage.modelHash)) {
-                BrokerProtocol.downloadModel(ConnectionPool.bytesToHex(peerMessage.modelHash));
-            }
+            ConnectionPool.modelCache.get(ByteBuffer.wrap(peerMessage.modelHash));
             ConnectionPool.node.sendResultMessage(source.toString(),
                     new PeerMessage(ByteBuffer.allocate(1), peerMessage.messageNumber, 0L));
         } else {
