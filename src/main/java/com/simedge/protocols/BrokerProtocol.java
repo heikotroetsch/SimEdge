@@ -186,7 +186,7 @@ public class BrokerProtocol {
                 ftpClient.disconnect();
             } else {
                 System.out.println("Download failed!!! Hash: " + hash + " != "
-                        + ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)).equalsIgnoreCase(hash));
+                        + ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)));
                 ftpClient.disconnect();
 
             }
