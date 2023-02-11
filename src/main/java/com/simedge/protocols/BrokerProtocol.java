@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.net.ftp.FTP;
+import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPSClient;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -159,6 +161,7 @@ public class BrokerProtocol {
             ftpClient.connect("134.155.108.108", 2021);
             ftpClient.enterLocalPassiveMode();
 
+            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
             ftpClient.login("simedge", "hte^W9k$DaZ@ep^q3%b1^A9h6g");
             System.out.print(ftpClient.getReplyString());
 
