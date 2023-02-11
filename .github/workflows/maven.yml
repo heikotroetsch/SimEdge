@@ -30,16 +30,13 @@ jobs:
     - name: Build with Maven
       run: mvn clean compile assembly:single  
       
-    - name: version
-      run: echo "::set-output name=version::$(./bin/azblogfilter --version)"
-      id: version
     - name: release
       uses: actions/create-release@v1
       id: create_release
       with:
         draft: false
         prerelease: false
-        release_name: ${{ steps.version.outputs.version }}
+        release_name: simedgeRelease
         tag_name: ${{ github.ref }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
