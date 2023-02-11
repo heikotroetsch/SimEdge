@@ -29,3 +29,13 @@ jobs:
         cache: maven
     - name: Build with Maven
       run: mvn clean compile assembly:single  
+      
+    - name: upload jar artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./target/simedge-1.0-SNAPSHOT-jar-with-dependencies.jar
+        asset_name: simedge-idle.jar
+        asset_content_type: application/jar
