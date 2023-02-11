@@ -42,7 +42,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ steps.vars.outputs.sha_short }}
-        release_name: Release ${{ github.ref }}
+        release_name: ${{ steps.vars.outputs.sha_short }}
         draft: false
         prerelease: false
     - name: Upload Release Asset
