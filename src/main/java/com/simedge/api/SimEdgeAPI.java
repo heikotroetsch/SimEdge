@@ -64,7 +64,7 @@ public class SimEdgeAPI {
     public void executeONNX(byte[] modelHash, String dataInputName, byte[] inputData, PeerMessage.DataType dType,
             int[] indicies) {
 
-        String scheduledResource = ConnectionPool.scheduler.scheduleResource();
+        String scheduledResource = ConnectionPool.scheduler.scheduleResource(modelHash);
         if (scheduledResource != null) {
             PeerMessage message = new PeerMessage(PeerMessage.MessageType.EXECUTE, dType, inputData, modelHash,
                     dataInputName, indicies);

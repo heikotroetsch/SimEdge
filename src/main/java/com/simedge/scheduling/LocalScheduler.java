@@ -77,14 +77,14 @@ public class LocalScheduler {
         }
     }
 
-    public String scheduleResource() {
+    public String scheduleResource(byte[] modelHash) {
         if (stop) {
             return null;
         }
 
         synchronized (addresses) {
             // Return local node address if waiting for resources or nothing availible
-            if (addresses.isEmpty()) {
+            if (addresses.isEmpty() || ConnectionPool.modelCache.downloadingModel(modelHash)) {
                 if (fullMessageController(ConnectionPool.node.identity().getAddress().toString())) {
                     return null;
                 } else {

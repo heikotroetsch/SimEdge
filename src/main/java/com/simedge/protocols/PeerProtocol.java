@@ -116,6 +116,7 @@ public class PeerProtocol {
         } else if (peerMessage.messageType == PeerMessage.MessageType.PING) {
             // handle PING by sending back result instantly
             ConnectionPool.modelCache.get(ByteBuffer.wrap(peerMessage.modelHash));
+            System.out.println("Sending back Ping message");
             ConnectionPool.node.sendResultMessage(source.toString(),
                     new PeerMessage(ByteBuffer.allocate(1), peerMessage.messageNumber, 0L));
         } else {

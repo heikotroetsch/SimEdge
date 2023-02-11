@@ -165,6 +165,10 @@ public class LRUCache {
         return models.get(hash);
     }
 
+    public boolean downloadingModel(byte[] modelHash) {
+        return downloadingModel.get(ByteBuffer.wrap(modelHash));
+    }
+
     public boolean hasModel(byte[] modelHash) {
         return models.contains(ByteBuffer.wrap(modelHash));
     }
