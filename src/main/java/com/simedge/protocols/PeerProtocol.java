@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.drasyl.identity.DrasylAddress;
+import org.drasyl.node.event.Peer;
 
 import com.simedge.api.SimEdgeAPI;
 import com.simedge.logger.Logger;
@@ -114,9 +115,7 @@ public class PeerProtocol {
 
         } else if (peerMessage.messageType == PeerMessage.MessageType.PING) {
             // handle PING by sending back result instantly
-            if ((ConnectionPool.modelCache
-                    .getONNXRuntime(ByteBuffer.wrap(peerMessage.modelHash))) == null) {
-
+            if (!ConnectionPool.modelCache.hasModel(peerMessage.modelHash)) {
                 BrokerProtocol.downloadModel(ConnectionPool.bytesToHex(peerMessage.modelHash));
             }
             ConnectionPool.node.sendResultMessage(source.toString(),

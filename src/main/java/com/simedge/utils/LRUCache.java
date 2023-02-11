@@ -165,6 +165,10 @@ public class LRUCache {
         return models.get(hash);
     }
 
+    public boolean hasModel(byte[] modelHash) {
+        return models.contains(ByteBuffer.wrap(modelHash));
+    }
+
     public void saveModelChacheToDisk() throws IOException {
         BufferedWriter bw = new BufferedWriter(new FileWriter("Persistant_LRUCache", true));
         while (LRU.size() > 0) {
