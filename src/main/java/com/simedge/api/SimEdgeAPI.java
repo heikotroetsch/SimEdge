@@ -51,6 +51,16 @@ public class SimEdgeAPI {
         }
     }
 
+    /**
+     * Execute ONNX model on edge computing system
+     * 
+     * @param modelHash     sha1 hash of the onnx model file using md.digest
+     * @param dataInputName input name of input tensor
+     * @param inputData     input data to run the model on
+     * @param dType         data type of the result
+     * @param indicies      array of indicies that should be returned. Using this
+     *                      returns only a part of the results.
+     */
     public void executeONNX(byte[] modelHash, String dataInputName, byte[] inputData, PeerMessage.DataType dType,
             int[] indicies) {
 
