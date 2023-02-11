@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPSClient;
@@ -173,12 +174,15 @@ public class BrokerProtocol {
             System.out.print(ftpClient.getReplyString());
 
             long start = System.currentTimeMillis();
-            ByteArrayOutputStream file = new ByteArrayOutputStream();
+            FileOutputStream file = new FileOutputStream("modelCache/" + hash);
 
             finished = ftpClient.retrieveFile(hash, file);
             System.out.print(ftpClient.getReplyString());
 
-            byte[] fileArray = file.toByteArray();
+            file.flush();
+            file.close();
+
+            byte[] fileArray = FileUtils.readFileToByteArray(new File("modelCache/" + hash));
             System.out.println(fileArray.length);
             System.out.println(ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)));
 
@@ -191,7 +195,7 @@ public class BrokerProtocol {
                 System.out.println("Download failed!!! Hash: " + hash + " != "
                         + ConnectionPool.bytesToHex(SimEdgeAPI.md.digest(fileArray)));
                 ftpClient.disconnect();
-
+                new File("modelCache/" + hash).delete();
             }
 
             // TODO add logic that throws out cached model if not enough memory

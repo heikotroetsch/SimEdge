@@ -152,7 +152,7 @@ public class SimEdgeAPI {
         return finished;
     }
 
-    public static void mainold(String[] args) {
+    public static void main(String[] args) {
 
         int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
                 1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
@@ -186,7 +186,7 @@ public class SimEdgeAPI {
 
     }
 
-    public static void main(String[] args) {
+    public static void mainold(String[] args) {
         SimEdgeAPI api = new SimEdgeAPI(4, 1024);
 
     }
