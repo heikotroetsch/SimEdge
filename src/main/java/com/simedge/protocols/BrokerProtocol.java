@@ -174,13 +174,12 @@ public class BrokerProtocol {
             System.out.print(ftpClient.getReplyString());
 
             long start = System.currentTimeMillis();
-            FileOutputStream file = new FileOutputStream("modelCache/" + hash);
 
-            finished = ftpClient.retrieveFile(hash, file);
+            OutputStream outputStream = new BufferedOutputStream(
+                    new FileOutputStream(new File("modelCache/" + hash)));
+            finished = ftpClient.retrieveFile(hash, outputStream);
+            outputStream.close();
             System.out.print(ftpClient.getReplyString());
-
-            file.flush();
-            file.close();
 
             byte[] fileArray = FileUtils.readFileToByteArray(new File("modelCache/" + hash));
             System.out.println(fileArray.length);
