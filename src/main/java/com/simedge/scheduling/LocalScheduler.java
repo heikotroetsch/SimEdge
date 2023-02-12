@@ -1,5 +1,6 @@
 package com.simedge.scheduling;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -256,6 +257,12 @@ public class LocalScheduler {
                             + peerMessage.onnxTime + ";" + (System.currentTimeMillis()
                                     - messageControllers.get(source.toString()).get(peerMessage.messageNumber))
                             + ";" + peerMessage.messageNumber);
+            try {
+                SimEdgeAPI.logger.logMessageNumber((int) peerMessage.messageNumber);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
             System.out
                     .println("Result Message Number: \t"
                             + peerMessage.messageNumber + "\t\tEntire execution cost: "

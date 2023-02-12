@@ -1,12 +1,16 @@
 package com.simedge.api;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -24,6 +28,7 @@ import com.google.protobuf.Message;
 import com.simedge.logger.Logger;
 import com.simedge.peer.ConnectionPool;
 import com.simedge.protocols.PeerMessage;
+import com.simedge.protocols.PeerMessage.DataType;
 
 public class SimEdgeAPI {
 
@@ -32,9 +37,9 @@ public class SimEdgeAPI {
     private static ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels = new ConcurrentHashMap<ByteBuffer, Boolean[]>();
     public static Logger logger = null;
 
-    public SimEdgeAPI(int resources, int MAX_MEMORY_MB) {
+    public SimEdgeAPI(int resources, int MAX_MEMORY_MB, boolean enableUDPEnegeryMessages) {
         try {
-            logger = new Logger();
+            logger = new Logger(enableUDPEnegeryMessages);
             logger.start();
         } catch (IOException e) {
             // TODO Auto-generated catch block
@@ -61,7 +66,7 @@ public class SimEdgeAPI {
      * @param indicies      array of indicies that should be returned. Using this
      *                      returns only a part of the results.
      */
-    public void executeONNX(byte[] modelHash, String dataInputName, byte[] inputData, PeerMessage.DataType dType,
+    public boolean executeONNX(byte[] modelHash, String dataInputName, byte[] inputData, PeerMessage.DataType dType,
             int[] indicies) {
 
         String scheduledResource = ConnectionPool.scheduler.scheduleResource(modelHash);
@@ -70,7 +75,10 @@ public class SimEdgeAPI {
                     dataInputName, indicies);
 
             ConnectionPool.node.sendMessage(scheduledResource, message);
+            return true;
         }
+
+        return false;
 
     }
 
@@ -166,14 +174,16 @@ public class SimEdgeAPI {
             movesbf.putFloat(f);
         }
 
-        SimEdgeAPI api = new SimEdgeAPI(4, 1024);
+        SimEdgeAPI api = new SimEdgeAPI(4, 1024, true);
         try {
             byte[] model = FileUtils.readFileToByteArray(new File("ML_Models/net_combined_moves2coords.onnx"));
 
             byte[] modelHash = api.commitModel(model, 4);
-            while (true) {
+            String file = FileUtils.readFileToString(new File("machineLearning/motions/fast_100.csv"),
+                    Charset.defaultCharset());
 
-                api.executeONNX(modelHash, "dense_input", movesbf.array(), PeerMessage.DataType.FLOAT, indices);
+            while (true) {
+                executeFromCSV(file, api, modelHash, "dense_input", PeerMessage.DataType.FLOAT, indices);
             }
 
         } catch (NoSuchAlgorithmException e) {
@@ -186,8 +196,31 @@ public class SimEdgeAPI {
 
     }
 
+    private static void executeFromCSV(String file, SimEdgeAPI api, byte[] modelHash, String string, DataType f,
+            int[] indices)
+            throws FileNotFoundException, IOException {
+
+        var lineIterator = file.lines().iterator();
+
+        while (lineIterator.hasNext()) {
+            var line = lineIterator.next();
+            ByteBuffer moves = ByteBuffer.allocate(16);
+            String[] values = line.split(" ");
+            moves.putFloat(Float.valueOf(values[0]));
+            moves.putFloat(Float.valueOf(values[1]));
+            moves.putFloat(Float.valueOf(values[2]));
+            moves.putFloat(0F);
+            boolean finished = false;
+            while (!finished) {
+                finished = api.executeONNX(modelHash, "dense_input", moves.array(), PeerMessage.DataType.FLOAT,
+                        indices);
+            }
+        }
+
+    }
+
     public static void main(String[] args) {
-        SimEdgeAPI api = new SimEdgeAPI(4, 1024);
+        SimEdgeAPI api = new SimEdgeAPI(4, 1024, false);
 
     }
 
