@@ -166,6 +166,9 @@ public class LRUCache {
     }
 
     public boolean downloadingModel(byte[] modelHash) {
+        if (downloadingModel.get(ByteBuffer.wrap(modelHash)) == null) {
+            return false;
+        }
         return downloadingModel.get(ByteBuffer.wrap(modelHash));
     }
 
