@@ -3,8 +3,10 @@ package com.simedge.scheduling;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.drasyl.identity.DrasylAddress;
+import org.drasyl.util.EvictingQueue;
 
 import com.simedge.api.SimEdgeAPI;
 import com.simedge.peer.ConnectionPool;
@@ -18,6 +20,8 @@ public class LocalScheduler {
     private ConcurrentHashMap<String, ConcurrentHashMap<Long, Long>> messageControllers = new ConcurrentHashMap<String, ConcurrentHashMap<Long, Long>>();
     // private ConcurrentHashMap<Long, Long> messageController = new
     // ConcurrentHashMap<Long, Long>();
+    ConcurrentHashMap<String, EvictingQueue<Double>> evictionQueue = new ConcurrentHashMap<String, EvictingQueue<Double>>();
+
     private static final int MAX_MESSAGES = 1;
     public static final int TIMEOUT = 100;
     private static boolean stop = false;
@@ -72,6 +76,7 @@ public class LocalScheduler {
             probabilities.remove(address);
             peerLastUsed.remove(address);
             messageControllers.remove(address);
+            evictionQueue.remove(address);
             addresses.remove(address);
 
             updateProbability();
@@ -89,7 +94,6 @@ public class LocalScheduler {
                 if (fullMessageController(ConnectionPool.node.identity().getAddress().toString())) {
                     return null;
                 } else {
-                    // return null;
                     return ConnectionPool.node.identity().getAddress().toString();
                 }
             }
@@ -103,7 +107,12 @@ public class LocalScheduler {
                     // only return address if peer is availible
                     if (peerAvailible(address) && !fullMessageController(address)) {
                         // if space free and avail return address selection
-                        return address;
+                        // check if peer has too large of a timeout
+                        if (evictionQueue.get(address).stream().mapToDouble(a -> a).average().getAsDouble() > TIMEOUT) {
+                            removeResource(address);
+                        } else {
+                            return address;
+                        }
                     }
 
                     // else if (!peerAvailible(address) && peerLastUsed.get(address) != -1) {
@@ -152,6 +161,7 @@ public class LocalScheduler {
             if (!address.equals(ConnectionPool.node.identity().getAddress().toString())) {
                 RTT.put(address, RTT.get(address) * 0.9 + rtt * 0.1);
                 executionTimes.put(address, executionTimes.get(address) * 0.9 + onnxExecution * 0.1);
+                evictionQueue.get(address).add(rtt + onnxExecution);
                 updateProbability();
             }
 
@@ -234,6 +244,7 @@ public class LocalScheduler {
 
         peerLastUsed.put(address, -1L);
         messageControllers.put(address, new ConcurrentHashMap<Long, Long>());
+        evictionQueue.put(address, new EvictingQueue<Double>(10));
         messageControllers.get(address).put(-1L, System.currentTimeMillis());
         ConnectionPool.node.sendMessage(address, new PeerMessage(-1, modelHash));
     }
