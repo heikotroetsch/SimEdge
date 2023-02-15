@@ -165,20 +165,11 @@ public class LRUCache {
         return models.get(hash);
     }
 
-    public boolean downloadingModel() {
-        boolean downloadingModel = true;
-        for (var hash : this.LRU) {
-            if (this.downloadingModel.get(hash) == null) {
-                downloadingModel = false;
-            } else {
-                if (!this.downloadingModel.get(hash)) {
-                    downloadingModel = false;
-                }
-            }
-
+    public boolean downloadingModel(byte[] modelHash) {
+        if (downloadingModel.get(ByteBuffer.wrap(modelHash)) == null) {
+            return false;
         }
-
-        return downloadingModel;
+        return downloadingModel.get(ByteBuffer.wrap(modelHash));
     }
 
     public boolean hasModel(byte[] modelHash) {

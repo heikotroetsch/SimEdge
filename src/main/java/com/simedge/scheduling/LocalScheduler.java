@@ -93,7 +93,7 @@ public class LocalScheduler {
             // all downloading
             // all unavailbile
 
-            if (addresses.isEmpty() || allUnavailible() || ConnectionPool.modelCache.downloadingModel()) {
+            if (addresses.isEmpty() || allUnavailible() || ConnectionPool.modelCache.downloadingModel(modelHash)) {
                 if (fullMessageController(ConnectionPool.node.identity().getAddress().toString())) {
                     return null;
                 } else {
