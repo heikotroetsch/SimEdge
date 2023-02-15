@@ -13,8 +13,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import com.simedge.protocols.BrokerProtocol;
 
 public class BrokerThread extends Thread {
-    String hostname = "134.155.108.108";
-    // String hostname = "192.168.0.92";
+    // String hostname = "134.155.108.108";
+    String hostname = "10.0.0.2";
     int port = 12345;
     BufferedReader reader;
     PrintWriter writer;
