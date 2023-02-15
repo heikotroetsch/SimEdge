@@ -93,7 +93,7 @@ public class LocalScheduler {
             // all downloading
             // all unavailbile
 
-            if (addresses.isEmpty() || allUnavailible() || ConnectionPool.modelCache.downloadingModel(modelHash)) {
+            if (addresses.isEmpty() || ConnectionPool.modelCache.downloadingModel(modelHash)) {
                 if (fullMessageController(ConnectionPool.node.identity().getAddress().toString())) {
                     return null;
                 } else {
@@ -146,17 +146,6 @@ public class LocalScheduler {
         // Scheduler!!!s");
         // return ConnectionPool.node.identity().getAddress().toString();
         return null;
-    }
-
-    private boolean allUnavailible() {
-        synchronized (addresses) {
-            for (var key : peerLastUsed.keySet()) {
-                if (peerAvailible(key)) {
-                    return false;
-                }
-            }
-            return true;
-        }
     }
 
     private void updateProbability() {
