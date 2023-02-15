@@ -96,7 +96,7 @@ public class PeerProtocol {
 
                 Map<String, OnnxTensor> dense_input = Map.of(peerMessage.inputName, input_tensor);
                 results = runtime.execute(dense_input);
-                System.out.println("Sending results  to: " + source.toString());
+                System.out.println("Sending results: " + peerMessage.messageNumber);
 
                 if ((System.currentTimeMillis() - start) < LocalScheduler.TIMEOUT) {
                     ConnectionPool.node.sendResultMessage(source.toString(),
