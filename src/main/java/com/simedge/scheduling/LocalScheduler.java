@@ -23,7 +23,7 @@ public class LocalScheduler {
     ConcurrentHashMap<String, EvictingQueue<Double>> evictionQueue = new ConcurrentHashMap<String, EvictingQueue<Double>>();
 
     private static final int MAX_MESSAGES = 1;
-    public static final int TIMEOUT = 100;
+    public static final int TIMEOUT = 500;
     private static boolean stop = false;
 
     private ConcurrentHashMap<String, Double> probabilities = new ConcurrentHashMap<String, Double>();
