@@ -23,7 +23,7 @@ public class LocalScheduler {
     ConcurrentHashMap<String, EvictingQueue<Double>> evictionQueue = new ConcurrentHashMap<String, EvictingQueue<Double>>();
 
     private static final int MAX_MESSAGES = 1;
-    public static final int TIMEOUT = 500;
+    public static final int TIMEOUT = 100;
     private static boolean stop = false;
 
     private ConcurrentHashMap<String, Double> probabilities = new ConcurrentHashMap<String, Double>();
@@ -93,7 +93,7 @@ public class LocalScheduler {
             // all downloading
             // all unavailbile
 
-            if (addresses.isEmpty() || ConnectionPool.modelCache.downloadingModel() || allUnavailible()) {
+            if (addresses.isEmpty() || allUnavailible() || ConnectionPool.modelCache.downloadingModel()) {
                 if (fullMessageController(ConnectionPool.node.identity().getAddress().toString())) {
                     return null;
                 } else {
@@ -111,11 +111,16 @@ public class LocalScheduler {
                     if (peerAvailible(address) && !fullMessageController(address)) {
                         // if space free and avail return address selection
                         // check if peer has too large of a timeout
-                        if (evictionQueue.get(address).stream().mapToDouble(a -> a).average().getAsDouble() > TIMEOUT) {
-                            removeResource(address);
-                        } else {
-                            return address;
-                        }
+                        return address;
+                        /*
+                         * if (evictionQueue.get(address).stream().mapToDouble(a ->
+                         * a).average().getAsDouble() > TIMEOUT) {
+                         * removeResource(address);
+                         * } else {
+                         * return address;
+                         * }
+                         */
+
                     }
 
                     // else if (!peerAvailible(address) && peerLastUsed.get(address) != -1) {
@@ -144,12 +149,14 @@ public class LocalScheduler {
     }
 
     private boolean allUnavailible() {
-        for (var key : peerLastUsed.keySet()) {
-            if (peerAvailible(key)) {
-                return false;
+        synchronized (addresses) {
+            for (var key : peerLastUsed.keySet()) {
+                if (peerAvailible(key)) {
+                    return false;
+                }
             }
+            return true;
         }
-        return true;
     }
 
     private void updateProbability() {
@@ -219,7 +226,7 @@ public class LocalScheduler {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        evictTimedOutResources();
+                        // evictTimedOutResources();
                     }
                 }).start();
             }
