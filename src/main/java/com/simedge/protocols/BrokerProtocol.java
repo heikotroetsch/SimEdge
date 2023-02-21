@@ -98,10 +98,6 @@ public class BrokerProtocol {
                 .add(MODEL_EXPIRED + ConnectionPool.bytesToHex(modelHash) + ";" + System.getProperty("line.separator"));
     }
 
-    public void SET_PING() {
-        // TODO
-    }
-
     public void BYE() {
         source.messageQueue.add(BYE + System.getProperty("line.separator"));
         source.shutdown();

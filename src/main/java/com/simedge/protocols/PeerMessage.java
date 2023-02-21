@@ -50,7 +50,7 @@ public class PeerMessage {
             this.id = id;
         }
 
-        public static DataType processByte(byte b) {
+        private static DataType processByte(byte b) {
             switch (b) {
                 case (byte) 1:
                     return DataType.BYTE;

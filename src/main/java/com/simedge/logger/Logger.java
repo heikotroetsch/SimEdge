@@ -44,12 +44,6 @@ public class Logger extends Thread {
         }
     }
 
-    public void shutdown() throws IOException {
-        pw.flush();
-        pw.close();
-        fw.close();
-    }
-
     private static String getCurrentTimeStamp() {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH_mm_ss");
         Date now = new Date();

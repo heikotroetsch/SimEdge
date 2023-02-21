@@ -31,7 +31,7 @@ public class BrokerThread extends Thread {
         this.initThread();
     }
 
-    public void initThread() {
+    private void initThread() {
 
         try {
             socket = new Socket(hostname, port);
