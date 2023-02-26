@@ -3,16 +3,13 @@ package com.simedge.scheduling;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.drasyl.identity.DrasylAddress;
 import org.drasyl.util.EvictingQueue;
 
 import com.simedge.api.SimEdgeAPI;
 import com.simedge.peer.ConnectionPool;
-import com.simedge.protocols.BrokerProtocol;
 import com.simedge.protocols.PeerMessage;
-import com.simedge.utils.LRUCache;
 
 public class LocalScheduler {
 
@@ -32,12 +29,21 @@ public class LocalScheduler {
 
     private ArrayList<String> addresses = new ArrayList<String>();
 
+    /**
+     * Constructor for creating local scheduler
+     */
     public LocalScheduler() {
         messageControllers.put(ConnectionPool.node.identity().getAddress().toString(),
                 new ConcurrentHashMap<Long, Long>());
         peerLastUsed.put(ConnectionPool.node.identity().getAddress().toString(), -1L);
     }
 
+    /**
+     * Adding resources to local scheduler when received from broker
+     * 
+     * @param address           Drasyl adress of resource
+     * @param latencyPrediction Latency prediction from broker
+     */
     public void addResource(String address, double latencyPrediction) {
         synchronized (addresses) {
             // add resource to list
@@ -55,6 +61,10 @@ public class LocalScheduler {
         }
     }
 
+    /**
+     * Return all resources when closing or leaving system or when done with
+     * execution
+     */
     public void returnAllResources() {
         stop = true;
         var localAdresses = new ArrayList<String>();
@@ -66,6 +76,11 @@ public class LocalScheduler {
         }
     }
 
+    /**
+     * Remove a resource from scheduler
+     * 
+     * @param address Drasyl address of resource to be returned
+     */
     public void removeResource(String address) {
         synchronized (addresses) {
             // 1. deregister resource from broker with updated RTT
@@ -83,6 +98,13 @@ public class LocalScheduler {
         }
     }
 
+    /**
+     * Schedule a resource according to the probability matrix.
+     * 
+     * @param modelHash Hash of model that will be run on provider
+     * @return Returns a provider adress based on probability that is availible for
+     *         execution
+     */
     public String scheduleResource(byte[] modelHash) {
         if (stop) {
             return null;
@@ -123,20 +145,6 @@ public class LocalScheduler {
 
                     }
 
-                    // else if (!peerAvailible(address) && peerLastUsed.get(address) != -1) {
-                    // if peer timed out remove peer.
-                    // removeResource(address);
-                    // }
-                    /*
-                     * else if (peerAvailible(address) && fullMessageController(address)) {
-                     * // if message controller full reschedule
-                     * return scheduleResource();
-                     * } else if (!peerAvailible(address) && peerLastUsed.get(address) == -1) {
-                     * // if waiting for ping message but some peer availible reschedule
-                     * return scheduleResource();
-                     * }
-                     */
-
                 }
             }
 
@@ -148,6 +156,9 @@ public class LocalScheduler {
         return null;
     }
 
+    /**
+     * Update the probabilities with new information
+     */
     private void updateProbability() {
         double sum = RTT.values().stream().mapToDouble(Double::doubleValue).sum()
                 + executionTimes.values().stream().mapToDouble(Double::doubleValue).sum();
@@ -164,6 +175,13 @@ public class LocalScheduler {
         System.out.println(probabilities.toString());
     }
 
+    /**
+     * Updates round trip time after execution and updates probabilities
+     * 
+     * @param address       String of peer address
+     * @param rtt           Round trip time to peer
+     * @param onnxExecution Computation time required for execution
+     */
     public void updateRTTAvarage(String address, double rtt, double onnxExecution) {
         synchronized (addresses) {
             if (!address.equals(ConnectionPool.node.identity().getAddress().toString())) {
@@ -177,7 +195,12 @@ public class LocalScheduler {
     }
 
     // Section for message controller
-
+    /**
+     * Checks message controller for a peer.
+     * 
+     * @param hash Peer address
+     * @return Returns true if message controller has no space left
+     */
     private boolean fullMessageController(String hash) {
         if (messageControllers.get(hash).size() >= MAX_MESSAGES) {
             cleanUpMessages(hash);
@@ -188,16 +211,34 @@ public class LocalScheduler {
 
     }
 
+    /**
+     * Adds a message to message controller using message number
+     * 
+     * @param hash          Address of peer
+     * @param messageNumber Message number to add
+     */
     public void addToMessageController(String hash, long messageNumber) {
         messageControllers.get(hash).put(messageNumber, System.currentTimeMillis());
     }
 
+    /**
+     * Checks if peer is already availible if peer was recently used or ping was
+     * returned.
+     * 
+     * @param peer Peer address
+     * @return returns true if peer is availbile.
+     */
     private boolean peerAvailible(String peer) {
         Long lastPeerMessageTime = peerLastUsed.get(peer);
         return (System.currentTimeMillis() - lastPeerMessageTime) < TIMEOUT;
 
     }
 
+    /**
+     * Cleans timed out messages in the message controller of a peer.
+     * 
+     * @param hash Peer address
+     */
     private synchronized void cleanUpMessages(String hash) {
         boolean hadToCleanUp = false;
         if (peerLastUsed.get(hash) != -1) {
@@ -212,18 +253,16 @@ public class LocalScheduler {
             }
 
             if (hadToCleanUp) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // evictTimedOutResources();
-                    }
-                }).start();
+
             }
 
         }
 
     }
 
+    /**
+     * Experimental: Evict resources that are timed out.
+     */
     private void evictTimedOutResources() {
         synchronized (addresses) {
             // every 100 messages check and remove resources that avarage more than a
@@ -245,7 +284,8 @@ public class LocalScheduler {
      * When resource is added to scheduler then ping that resource with message
      * number -1.
      * 
-     * @param address
+     * @param address   resource adress to ping
+     * @param modelHash hash of model to be executed
      */
     private void pingResource(String address, byte[] modelHash) {
         System.out.println("Sending first Message to Peer: " + address);
@@ -257,10 +297,21 @@ public class LocalScheduler {
         ConnectionPool.node.sendMessage(address, new PeerMessage(-1, modelHash));
     }
 
+    /**
+     * Update peer last used metric when peer message is recevied
+     * 
+     * @param peer Peer address
+     */
     private void updatePeerLastUsed(String peer) {
         peerLastUsed.put(peer, System.currentTimeMillis());
     }
 
+    /**
+     * Update message controller by removing message returned
+     * 
+     * @param source      Peer adress
+     * @param peerMessage Result message from peer
+     */
     public void updateMessageController(DrasylAddress source, PeerMessage peerMessage) {
         synchronized (addresses) {
             if (peerMessage.messageNumber == -1 && !source.equals(ConnectionPool.node.identity().getAddress())) {

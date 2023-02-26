@@ -1,10 +1,5 @@
 package com.simedge.peer;
 
-import org.drasyl.handler.PeersRttHandler;
-import org.drasyl.handler.PeersRttHandler.PeerRtt;
-import org.drasyl.handler.PeersRttHandler.PeersRttReport;
-import org.drasyl.handler.PeersRttHandler.PeerRtt.Role;
-import org.drasyl.identity.DrasylAddress;
 import org.drasyl.node.DrasylConfig;
 import org.drasyl.node.DrasylException;
 import org.drasyl.node.DrasylNode;
@@ -14,15 +9,8 @@ import org.drasyl.node.event.NodeOnlineEvent;
 
 import com.simedge.protocols.PeerMessage;
 import com.simedge.protocols.PeerProtocol;
-
-import io.netty.channel.ChannelHandlerContext;
-
-import java.net.InetSocketAddress;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Starts a {@link DrasylNode} which sends one message to given address and
@@ -80,18 +68,16 @@ public class PeerConnection extends DrasylNode {
                 resultQuant++;
             }
 
-            /**
-             * System.out.println("Got `" + ((MessageEvent) event).getPayload() + "` from `"
-             * + ((MessageEvent) event).getSender() + "`");
-             * send(((MessageEvent) event).getSender(), ((MessageEvent)
-             * event).getPayload()).exceptionally(e -> {
-             * throw new RuntimeException("Unable to process message.", e);
-             * });
-             */
         }
 
     }
 
+    /**
+     * Send PeerMessage over drasyl network
+     * 
+     * @param recipient_identity Identity String of recipient
+     * @param peerMessage        Peer message to be sent
+     */
     public void sendMessage(String recipient_identity, PeerMessage peerMessage) {
         System.out
                 .println("Sent Message Number: \t"
@@ -105,7 +91,7 @@ public class PeerConnection extends DrasylNode {
     }
 
     /**
-     * Own method fo sending results. Sending results is always possible even if
+     * Own method for sending results. Sending results is always possible even if
      * Message controller is full. Ensures instant sendback.
      * 
      * @param recipient_identity String Adress of node to send to
@@ -119,24 +105,3 @@ public class PeerConnection extends DrasylNode {
     }
 
 }
-
-/*
- * https://github.com/drasyl/drasyl/releases/download/v0.9.0/drasyl-0.9.0.zip
- * brew install drasyl/tap/drasyl
- * choco install drasyl
- * .\drasyl.bat node --config ./drasyl.conf --verbose INFO
- * ./drasyl node ...
- * 
- * drasyl.conf
- * drasyl {
- * intra-vm-discovery.enabled = false
- *
- * remote {
- * bind-port = 22527
- * expose.enabled = false
- * super-peer.enabled = false
- * local-host-discovery.enabled = false
- * local-network-discovery.enabled = false
- * }
- * }
- */

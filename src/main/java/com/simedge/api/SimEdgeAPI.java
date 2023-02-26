@@ -1,35 +1,25 @@
 package com.simedge.api;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
-
-import javax.swing.plaf.synth.SynthOptionPaneUI;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPSClient;
-import org.drasyl.node.event.Peer;
-
-import com.google.protobuf.Message;
 import com.simedge.logger.Logger;
 import com.simedge.peer.ConnectionPool;
 import com.simedge.protocols.PeerMessage;
 import com.simedge.protocols.PeerMessage.DataType;
 
+/**
+ * SimEdge API class
+ */
 public class SimEdgeAPI {
 
     public static MessageDigest md;
@@ -37,6 +27,16 @@ public class SimEdgeAPI {
     private static ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels = new ConcurrentHashMap<ByteBuffer, Boolean[]>();
     public static Logger logger = null;
 
+    /**
+     * Constructor for the SimEdge system.
+     * 
+     * @param resources                Number of resources the local system provies
+     *                                 to the SimEdge system.
+     * @param MAX_MEMORY_MB            Max amount of memory that can by used by the
+     *                                 model cache.
+     * @param enableUDPEnegeryMessages Enable looging UDP messages to UM25C energy
+     *                                 logger.
+     */
     public SimEdgeAPI(int resources, int MAX_MEMORY_MB, boolean enableUDPEnegeryMessages) {
         try {
             logger = new Logger(enableUDPEnegeryMessages);
@@ -58,7 +58,7 @@ public class SimEdgeAPI {
 
     /**
      * Execute ONNX model on edge computing system
-     * 
+     *
      * @param modelHash     sha1 hash of the onnx model file using md.digest
      * @param dataInputName input name of input tensor
      * @param inputData     input data to run the model on
@@ -86,7 +86,7 @@ public class SimEdgeAPI {
      * Commits a onnx model to the system. If the model has not been commited to the
      * broker yet it will be uploaded to the repository. Otherwise it will be
      * downloaded by clients who require it.
-     * 
+     *
      * @param modelFile       the model file to be comitted
      * @param numberResources the number of resources that should be prepared to
      *                        execute the model
@@ -123,6 +123,13 @@ public class SimEdgeAPI {
 
     }
 
+    /**
+     * Uploading Model
+     * 
+     * @param hash model hash
+     * @param file file byes
+     * @return True if successfull
+     */
     private static boolean uploadFile(String hash, byte[] file) {
         boolean finished = false;
 
@@ -160,7 +167,7 @@ public class SimEdgeAPI {
         return finished;
     }
 
-    public static void main(String[] args) {
+    public static void main_Execution_Test(String[] args) {
 
         int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086, 1107,
                 1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
@@ -196,6 +203,18 @@ public class SimEdgeAPI {
 
     }
 
+    /**
+     * Test method for running tasks from CSV input.
+     * 
+     * @param file      CSV input file
+     * @param api       SimEdge API
+     * @param modelHash Model hash
+     * @param string    Input name string
+     * @param f         Data Type
+     * @param indices   Indicies
+     * @throws FileNotFoundException
+     * @throws IOException
+     */
     private static void executeFromCSV(String file, SimEdgeAPI api, byte[] modelHash, String string, DataType f,
             int[] indices)
             throws FileNotFoundException, IOException {
@@ -219,13 +238,14 @@ public class SimEdgeAPI {
 
     }
 
-    /*
-     * Idle code
+    /**
+     * Idle system Initialization
      * 
-     * public static void mainold(String[] args) {
-     * SimEdgeAPI api = new SimEdgeAPI(4, 1024, false);
-     * 
-     * }
+     * @param args
      */
+    public static void mainold(String[] args) {
+        SimEdgeAPI api = new SimEdgeAPI(4, 1024, false);
+
+    }
 
 }

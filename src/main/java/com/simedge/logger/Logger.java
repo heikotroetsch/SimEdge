@@ -11,6 +11,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+/**
+ * Logging class for evaluation
+ */
 public class Logger extends Thread {
 
     public ConcurrentLinkedQueue<String> toWrite = new ConcurrentLinkedQueue<String>();
@@ -19,6 +22,13 @@ public class Logger extends Thread {
     private static final long start = System.currentTimeMillis();
     DatagramSocket ds = null;
 
+    /**
+     * Creates new logger
+     * 
+     * @param enableUDPEnegeryMessages If UDP messages should be sent to UM25C
+     *                                 logger
+     * @throws IOException
+     */
     public Logger(boolean enableUDPEnegeryMessages) throws IOException {
         var file = Files.createFile(Paths.get("logs/log_" + getCurrentTimeStamp() + ".csv"));
         fw = new FileWriter(file.toFile());
@@ -44,6 +54,11 @@ public class Logger extends Thread {
         }
     }
 
+    /**
+     * Convert Timestamp of current Time to human readable string
+     * 
+     * @return Timestamp as "yyyy-MM-dd'T'HH_mm_ss"
+     */
     private static String getCurrentTimeStamp() {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH_mm_ss");
         Date now = new Date();
@@ -51,6 +66,12 @@ public class Logger extends Thread {
         return result;
     }
 
+    /**
+     * Log message via UDP to energy logger
+     * 
+     * @param messageNumber Message number
+     * @throws IOException
+     */
     public void logMessageNumber(int messageNumber) throws IOException {
         if (this.ds != null) {
             InetAddress ip = InetAddress.getByName("192.168.0.92");

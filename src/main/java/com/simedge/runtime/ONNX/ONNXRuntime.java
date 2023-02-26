@@ -1,8 +1,6 @@
 package com.simedge.runtime.ONNX;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -14,8 +12,10 @@ import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtException;
 import ai.onnxruntime.OrtSession;
 import ai.onnxruntime.OrtSession.Result;
-import org.apache.commons.io.FileUtils;
 
+/**
+ * Onnx Runtime environment
+ */
 public class ONNXRuntime {
 
     public enum Error {
@@ -45,6 +45,7 @@ public class ONNXRuntime {
     private int dataTypeSize;
 
     /**
+     * Initalize ONNX runtime
      * 
      * @param model        Bytes of the ML ONNX model. Using>
      *                     FileUtils.readFileToByteArray(new File(String Path)),
@@ -66,6 +67,7 @@ public class ONNXRuntime {
     }
 
     /**
+     * Execute ONNX model using runtime initialization
      * 
      * @param dense_input input that gets used by model to do inference
      * @return returns a Map of OnnxTensors which have a type and the values.
@@ -92,47 +94,16 @@ public class ONNXRuntime {
 
     }
 
-    /*
-     * public static void main(String[] args) {
-     * try {
-     * 
-     * int indices[] = new int[] { 15, 52, 339, 434, 570, 730, 868, 938, 976, 1086,
-     * 1107,
-     * 1198, 1230, 1254, 1314, 1361, 1409, 1424, 1452, 1507, 1590, 1660,
-     * 1742, 2139, 2227, 2487, 2514,
-     * 2547, 2586, 2619 };
-     * 
-     * ONNXRuntime runtime = new ONNXRuntime(
-     * FileUtils.readFileToByteArray(
-     * new File("modelCache/baed48a5c57c26eb7efc412cfd26ca6e379e86e3")),
-     * indices, 4);
-     * 
-     * float[] moves = new float[] { 3.895135498046875000e+01f,
-     * 3.025833129882812500e+02f, 3.746795654296875000e+02f, 0f };
-     * 
-     * var input_tensor = OnnxTensor.createTensor(runtime.env, new float[][] { moves
-     * });
-     * Map<String, OnnxTensor> dense_input = Map.of("dense_input", input_tensor);
-     * ByteBuffer results;
-     * results = runtime.execute(dense_input);
-     * if (results.limit() == 1) {
-     * System.out.print(ONNXRuntime.Error.messageOf(results.get()));
-     * } else {
-     * printFloatBuffer(results.asFloatBuffer());
-     * }
-     * 
-     * } catch (OrtException e) {
-     * // TODO Auto-generated catch block
-     * e.printStackTrace();
-     * } catch (IOException e) {
-     * // TODO Auto-generated catch block
-     * e.printStackTrace();
-     * }
-     * 
-     * }
-     */
     // utils
 
+    /**
+     * Util method to reduce result with indicies
+     * 
+     * @param indicies     Indicies which defines subresult to be return
+     * @param results      Reults of ONNX execution
+     * @param dataTypeSize Data type size for extracting from byte buffer
+     * @return Returns byte buffer of reduced results
+     */
     private static ByteBuffer reduceResults(int[] indicies, Map<String, ByteBuffer> results, int dataTypeSize) {
 
         if (indicies != null) {
@@ -166,6 +137,11 @@ public class ONNXRuntime {
         }
     }
 
+    /**
+     * Experimental method trying to getting GPU device by ID
+     * 
+     * @return
+     */
     public static int getGPUid() {
         try {
             if (System.getProperty("os.name").contains("Windows")) {
@@ -214,6 +190,15 @@ public class ONNXRuntime {
         return -1;
     }
 
+    /**
+     * Util method to reduce single result
+     * 
+     * @param indices      indicies
+     * @param results      byte buffer results
+     * @param dataTypeSize data type size in bytes to extract from byte buffer
+     * @return Return reduction results as byte buffer
+     * @throws IndexOutOfBoundsException
+     */
     public static ByteBuffer reduceOneResults(int[] indices, ByteBuffer results, int dataTypeSize)
             throws IndexOutOfBoundsException {
 
@@ -228,6 +213,11 @@ public class ONNXRuntime {
         return output;
     }
 
+    /**
+     * Util method for printing float buffer for debugging
+     * 
+     * @param buffer Float buffer to print
+     */
     public static void printFloatBuffer(FloatBuffer buffer) {
         System.out.println("Resut Array with size: " + buffer.limit());
         System.out.println("Resut Buffer with allocation: " + buffer.capacity());
@@ -239,10 +229,3 @@ public class ONNXRuntime {
         System.out.println("");
     }
 }
-
-// 2809 punkte geben das dreifache an werten
-// iterierend xyz array [2809, 3] 3> xyz
-// array([ 15., 52., 339., 434., 570., 730., 868., 938., 976.,
-// 1086., 1107., 1198., 1230., 1254., 1314., 1361., 1409., 1424.,
-// 1452., 1507., 1590., 1660., 1742., 2139., 2227., 2487., 2514.,
-// 2547., 2586., 2619.])

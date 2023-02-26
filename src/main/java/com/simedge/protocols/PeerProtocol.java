@@ -4,12 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.drasyl.identity.DrasylAddress;
-import org.drasyl.node.event.Peer;
-
-import com.simedge.api.SimEdgeAPI;
-import com.simedge.logger.Logger;
 import com.simedge.peer.ConnectionPool;
-import com.simedge.peer.PeerConnection;
 import com.simedge.runtime.ONNX.ONNXRuntime;
 import com.simedge.scheduling.LocalScheduler;
 
@@ -18,8 +13,14 @@ import ai.onnxruntime.OrtException;
 
 public class PeerProtocol {
 
+    /**
+     * Handle the peer message for execution with ONNX
+     * 
+     * @param peerMessage peer message
+     * @param source      Source of receive event for sending result.
+     */
     public static void handleMessage(PeerMessage peerMessage, DrasylAddress source) {
-
+        // TODO move to runtime
         if (peerMessage.messageType == PeerMessage.MessageType.EXECUTE) {
             ByteBuffer results = ByteBuffer.allocate(1);
             try {

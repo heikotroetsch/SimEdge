@@ -3,21 +3,14 @@ package com.simedge.protocols;
 import java.io.File;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.sql.Connection;
 import java.util.Arrays;
-import java.util.Set;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentHashMap.KeySetView;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.ftp.FTP;
-import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPSClient;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
@@ -43,6 +36,12 @@ public class BrokerProtocol {
     public static final int MODEL_EXPIRED = 8;
     public static final int LOAD_MODEL = 9;
 
+    /**
+     * Broker constructor to initialize protocol
+     * 
+     * @param source         Source thread
+     * @param commitedModels Map of commited models and their status
+     */
     public BrokerProtocol(BrokerThread source, ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels) {
         this.source = source;
         this.commitedModels = commitedModels;
@@ -51,6 +50,11 @@ public class BrokerProtocol {
 
     // Sending messages
 
+    /**
+     * Registers device with the broker
+     * 
+     * @param numberResources Number of resource availible locally
+     */
     public void REGISTER(int numberResources) {
         Integer[] pings = new Integer[0];
         try {
@@ -68,11 +72,22 @@ public class BrokerProtocol {
                 + ping.toString() + System.getProperty("line.separator"));
     }
 
+    /**
+     * Get resources for execution
+     * 
+     * @param numberResources Number of resources required for exeuction
+     */
     public void GET_RESOURCE(int numberResources) {
         source.messageQueue.add(GET_RESOURCE + "" + numberResources + ";"
                 + System.getProperty("line.separator"));
     }
 
+    /**
+     * Return resource no longer required
+     * 
+     * @param resourceIdentity Resource idenity as string
+     * @param rtt              Round trip time between this device and provider
+     */
     public void RETURN_RESOURCE(String resourceIdentity, double rtt) {
         source.messageQueue
                 .add(RETURN_RESOURCE + resourceIdentity + ";" + rtt + ";" + System.getProperty("line.separator"));
@@ -80,24 +95,42 @@ public class BrokerProtocol {
 
     }
 
+    /**
+     * Check if model is stored on broker
+     * 
+     * @param modelHash Hash of model to check
+     */
     public void CHECK_MODEL(byte[] modelHash) {
         System.out.println("Hashlength: " + modelHash.length);
         source.messageQueue
                 .add(CHECK_MODEL + ConnectionPool.bytesToHex(modelHash) + ";" + System.getProperty("line.separator"));
     }
 
+    /**
+     * Tell broker that model is cached
+     * 
+     * @param modelHash model hash
+     */
     public void MODEL_CACHED(byte[] modelHash) {
         System.out.println("Hashlength: " + modelHash.length);
         source.messageQueue
                 .add(MODEL_CACHED + ConnectionPool.bytesToHex(modelHash) + ";" + System.getProperty("line.separator"));
     }
 
+    /**
+     * Tell broker that model had to be eviced from cache
+     * 
+     * @param modelHash model hash
+     */
     public void MODEL_EXPIRED(byte[] modelHash) {
         System.out.println("Hashlength: " + modelHash.length);
         source.messageQueue
                 .add(MODEL_EXPIRED + ConnectionPool.bytesToHex(modelHash) + ";" + System.getProperty("line.separator"));
     }
 
+    /**
+     * Disconnect broker
+     */
     public void BYE() {
         source.messageQueue.add(BYE + System.getProperty("line.separator"));
         source.shutdown();
@@ -105,14 +138,29 @@ public class BrokerProtocol {
 
     // Receiving messages
 
+    /**
+     * Process broker welcome message
+     * 
+     * @param content
+     */
     public void process_HELLO(String content) {
         System.out.println(content);
     }
 
+    /**
+     * Process wrong message type
+     * 
+     * @param content
+     */
     public void process_FAILURE(String content) {
         System.err.println(content);
     }
 
+    /**
+     * Process resources being assigned by the broker
+     * 
+     * @param content
+     */
     public void process_GET_RESOURCE(String content) {
 
         String resourcehash = content.split(";")[0];
@@ -123,12 +171,23 @@ public class BrokerProtocol {
         System.out.println("Added Resource");
     }
 
+    /**
+     * After returning a resource handle aknowledgement to remove resource from
+     * scheduler
+     * 
+     * @param content
+     */
     public void process_RETURN_RESOURCE(String content) {
         // broker notification that resource has left.
         // Removes resource from scheduler so it is no longer sent to.
         ConnectionPool.scheduler.removeResource(content);
     }
 
+    /**
+     * Update model status when broker check done
+     * 
+     * @param content
+     */
     public void process_CHECK_MODEL(String content) {
         String[] contents = content.split(";");
         byte[] hash = ConnectionPool.hexToBytes(contents[0]);
@@ -141,10 +200,20 @@ public class BrokerProtocol {
                 new Boolean[] { true, contents[1].equals("0") ? false : true });
     }
 
+    /**
+     * Not implemented
+     * 
+     * @param content
+     */
     public void process_SET_PING(String content) {
         // TODO
     }
 
+    /**
+     * Load model from broker or drive if requested by broker.
+     * 
+     * @param content
+     */
     public void process_LOAD_MODEL(String content) {
         String hash = content.split(";")[0];
         boolean finished = downloadModel(hash);
@@ -155,6 +224,12 @@ public class BrokerProtocol {
 
     }
 
+    /**
+     * Download model from broker
+     * 
+     * @param hash model hash of model to download
+     * @return
+     */
     public static boolean downloadModel(String hash) {
         System.out.println("Downloading Model: " + hash);
         boolean finished = false;
@@ -208,6 +283,11 @@ public class BrokerProtocol {
         return finished;
     }
 
+    /**
+     * Get method of commited models
+     * 
+     * @return KeySetView of commited models
+     */
     public KeySetView<ByteBuffer, Boolean[]> getCommitedModels() {
         return commitedModels.keySet();
     }

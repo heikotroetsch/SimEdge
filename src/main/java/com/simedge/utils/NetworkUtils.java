@@ -7,7 +7,17 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.LinkedList;
 
+/**
+ * Utils for network profiling via ping mesasges over HTTP
+ */
 public class NetworkUtils {
+
+    /**
+     * Get pings to each azure zone
+     * 
+     * @return returns a integer array of ping times
+     * @throws IOException
+     */
     public static Integer[] getPings() throws IOException {
         BufferedReader br = new BufferedReader(new FileReader("azureZones"));
         String url;
@@ -20,6 +30,12 @@ public class NetworkUtils {
         return results.toArray(new Integer[results.size()]);
     }
 
+    /**
+     * Pings a URL using HTTP connect
+     * 
+     * @param URL URL to ping
+     * @return Returns ping time
+     */
     private static long ping(String URL) {
 
         long time = System.currentTimeMillis();

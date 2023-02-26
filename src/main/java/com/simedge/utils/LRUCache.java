@@ -2,7 +2,6 @@ package com.simedge.utils;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -13,14 +12,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.net.ftp.FTPSClient;
-
 import com.simedge.peer.ConnectionPool;
 import com.simedge.protocols.BrokerProtocol;
 import com.simedge.runtime.ONNX.ONNXRuntime;
 
+/**
+ * Model cache based on least recently used data structure
+ */
 public class LRUCache {
     long MAX_MEMORY;
     long USED_MEMORY = 0L;
@@ -30,6 +29,11 @@ public class LRUCache {
     ConcurrentLinkedDeque<ByteBuffer> LRU = new ConcurrentLinkedDeque<ByteBuffer>();
     private ConcurrentHashMap<ByteBuffer, Boolean> downloadingModel = new ConcurrentHashMap<ByteBuffer, Boolean>();
 
+    /**
+     * Initialize model cache
+     * 
+     * @param MAX_MEMORY Max size of model cache
+     */
     public LRUCache(long MAX_MEMORY) {
         this.MAX_MEMORY = MAX_MEMORY;
         try {
@@ -40,10 +44,22 @@ public class LRUCache {
         }
     }
 
+    /**
+     * Put onnx Runtime environment into cache
+     * 
+     * @param modelHash Model hash for execution
+     * @param runtime   Onnx runtime initialized with model
+     */
     public void putONNXRuntime(ByteBuffer modelHash, ONNXRuntime runtime) {
         onnxRuntimes.put(modelHash, runtime);
     }
 
+    /**
+     * Get initialized Onnx Runtime of the model
+     * 
+     * @param modelHash model hash
+     * @return returns initialized Onnx runtime with corresponding model
+     */
     public ONNXRuntime getONNXRuntime(ByteBuffer modelHash) {
         return onnxRuntimes.get(modelHash);
     }
@@ -150,13 +166,8 @@ public class LRUCache {
 
                 // TODO do in thread so not blocking
 
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        BrokerProtocol.downloadModel(ConnectionPool.bytesToHex(hash.array()));
-                        downloadingModel.remove(hash);
-                    }
-                }).start();
+                BrokerProtocol.downloadModel(ConnectionPool.bytesToHex(hash.array()));
+                downloadingModel.remove(hash);
 
                 return null;
                 // throw away message after download since it took way too long
@@ -165,6 +176,12 @@ public class LRUCache {
         return models.get(hash);
     }
 
+    /**
+     * Checks if model is downloading
+     * 
+     * @param modelHash Model hash to check
+     * @return true if model is downloading
+     */
     public boolean downloadingModel(byte[] modelHash) {
         if (downloadingModel.get(ByteBuffer.wrap(modelHash)) == null) {
             return false;
@@ -172,10 +189,22 @@ public class LRUCache {
         return downloadingModel.get(ByteBuffer.wrap(modelHash));
     }
 
+    /**
+     * Check if model is stored in LRU cache
+     * 
+     * @param modelHash model cache to check for
+     * @return Returns true if model is stored
+     */
     public boolean hasModel(byte[] modelHash) {
         return models.contains(ByteBuffer.wrap(modelHash));
     }
 
+    /**
+     * Saves models from cache to disk to allow for persistant model cache between
+     * system launches
+     * 
+     * @throws IOException
+     */
     public void saveModelChacheToDisk() throws IOException {
         BufferedWriter bw = new BufferedWriter(new FileWriter("Persistant_LRUCache", true));
         while (LRU.size() > 0) {
@@ -191,6 +220,11 @@ public class LRUCache {
 
     }
 
+    /**
+     * Loads the cache from disk on startup.
+     * 
+     * @throws IOException
+     */
     private void loadPersistantLRUCache() throws IOException {
         BufferedReader br = new BufferedReader(new FileReader("Persistant_LRUCache"));
         String modelHash;

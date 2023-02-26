@@ -2,14 +2,12 @@ package com.simedge.protocols;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-
-import com.google.protobuf.Message;
-
-import io.netty.buffer.ByteBuf;
 
 public class PeerMessage {
 
+    /**
+     * Enum describing message types
+     */
     public enum MessageType {
         EXECUTE((byte) 1),
         RESULT((byte) 2),
@@ -35,6 +33,9 @@ public class PeerMessage {
         }
     }
 
+    /**
+     * Data type enum
+     */
     public enum DataType {
         BYTE((byte) 1),
         INT((byte) 2),
@@ -106,6 +107,12 @@ public class PeerMessage {
     int[] indices;
     public long onnxTime;
 
+    /**
+     * Constructor for creating a PeerMessage instance from byte package that is
+     * received
+     * 
+     * @param packet Byte package received
+     */
     public PeerMessage(byte[] packet) {
         data = ByteBuffer.allocate(packet.length);
         // data = ByteBuffer.allocateDirect(packet.length);
@@ -152,14 +159,14 @@ public class PeerMessage {
     }
 
     /**
-     * Construct execute message
+     * Construct for execute message
      * 
-     * @param messageType
-     * @param dataType
-     * @param data
-     * @param modelHash
-     * @param inputName
-     * @param indices
+     * @param messageType Message type
+     * @param dataType    Data type
+     * @param data        byte array of data
+     * @param modelHash   byte array of model hash
+     * @param inputName   String input name of model
+     * @param indices     Reduction indicies to reduce model
      */
     public PeerMessage(MessageType messageType, DataType dataType, byte[] data, byte[] modelHash,
             String inputName, int[] indices) {
@@ -177,10 +184,11 @@ public class PeerMessage {
     }
 
     /**
-     * Construct a Result message
+     * Constructor for a Result message
      * 
-     * @param data
-     * @param messageNumber
+     * @param data          result data as byte buffer
+     * @param messageNumber Message number
+     * @param onnxTime      execution time
      */
     public PeerMessage(ByteBuffer data, long messageNumber, long onnxTime) {
         this.messageNumber = messageNumber;
@@ -192,7 +200,8 @@ public class PeerMessage {
     /**
      * Construct a PING message
      * 
-     * @param messageNumber
+     * @param messageNumber message number
+     * @param modelHash     model hash
      */
     public PeerMessage(long messageNumber, byte[] modelHash) {
         this.messageNumber = messageNumber;
@@ -200,6 +209,12 @@ public class PeerMessage {
         this.modelHash = modelHash;
     }
 
+    /**
+     * Returns the peer message serialized as byte array for sending over drasyl
+     * node
+     * 
+     * @return byte array representation of peer message
+     */
     public byte[] getMessageBytes() {
         if (this.messageType == MessageType.EXECUTE) {
             ByteBuffer byteBuffer = ByteBuffer

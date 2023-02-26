@@ -25,12 +25,21 @@ public class BrokerThread extends Thread {
     public ConcurrentLinkedQueue<String> messageQueue = new ConcurrentLinkedQueue<String>();
     public BrokerProtocol brokerProtocol;
 
+    /**
+     * Broker Initialization connecting to the broker host.
+     * 
+     * @param peerIdentiy    Peer Identity given by drasyl.
+     * @param commitedModels Map of models already commited.
+     */
     public BrokerThread(String peerIdentiy, ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels) {
         this.brokerProtocol = new BrokerProtocol(this, commitedModels);
         this.peerIdentity = peerIdentiy;
         this.initThread();
     }
 
+    /**
+     * Initializes thread
+     */
     private void initThread() {
 
         try {
@@ -48,6 +57,9 @@ public class BrokerThread extends Thread {
         }
     }
 
+    /**
+     * Overrides run method of thread
+     */
     public void run() {
         // thread for reading from socket
         new Thread(new Runnable() {
@@ -136,6 +148,12 @@ public class BrokerThread extends Thread {
         this.stop = true;
     }
 
+    /**
+     * Handles incoming messages using protocol
+     * 
+     * @param messageType Message type from broker Protocol
+     * @param content     Content delivered without message type
+     */
     private void handleMessage(int messageType, String content) {
 
         switch (messageType) {

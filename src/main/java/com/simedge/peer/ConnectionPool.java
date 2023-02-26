@@ -8,14 +8,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
-import javax.swing.plaf.synth.SynthOptionPaneUI;
-
 import org.apache.commons.io.FileUtils;
-import org.drasyl.handler.PeersRttHandler;
-import org.drasyl.handler.PeersRttHandler.PeerRtt;
-import org.drasyl.handler.PeersRttHandler.PeersRttReport;
 import org.drasyl.node.DrasylException;
 
 import com.simedge.broker.client.BrokerThread;
@@ -28,6 +21,14 @@ public class ConnectionPool {
     public static PeerConnection node;
     public static BrokerThread brokerConnection;
 
+    /**
+     * Initializes Broker connection, drasyl peer and model cache
+     * 
+     * @param numberOfResources Number of resources the local device supplies to the
+     *                          SimEdge system
+     * @param MAX_MEMORY        Max Memory that can be used by the model cache
+     * @param commitedModels    List of commited models and state
+     */
     public static void initPeer(int numberOfResources, long MAX_MEMORY,
             ConcurrentHashMap<ByteBuffer, Boolean[]> commitedModels) {
         modelCache = new LRUCache(MAX_MEMORY);
@@ -72,6 +73,12 @@ public class ConnectionPool {
 
     }
 
+    /**
+     * Fills the model Cache with locally saved models
+     * 
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
     private static void fillModelCache() throws IOException, NoSuchAlgorithmException {
         // if folder missing make folder
         File[] models = new File("modelCache/").listFiles();
@@ -84,6 +91,12 @@ public class ConnectionPool {
         }
     }
 
+    /**
+     * Utility function to convert a byte representation of a hash to a hex string
+     * 
+     * @param bytes Byte array of hash
+     * @return
+     */
     public static String bytesToHex(byte[] bytes) {
         final char[] hexArray = { '0', '1', '2', '3', '4', '5', '6', '7', '8',
                 '9', 'a', 'b', 'c', 'd', 'e', 'f' };
@@ -97,6 +110,12 @@ public class ConnectionPool {
         return new String(hexChars);
     }
 
+    /**
+     * Utility Function converting hex string to byte representation of a hash
+     * 
+     * @param s Hex String of hash
+     * @return
+     */
     public static byte[] hexToBytes(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];
