@@ -42,7 +42,6 @@ public class SimEdgeAPI {
             logger = new Logger(enableUDPEnegeryMessages);
             logger.start();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
@@ -51,7 +50,6 @@ public class SimEdgeAPI {
 
             md = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -160,7 +158,6 @@ public class SimEdgeAPI {
                     .println("Upload " + finished + ": " + ((System.currentTimeMillis() - start) / 1000) + " seconds");
             ftpClient.disconnect();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
@@ -194,10 +191,8 @@ public class SimEdgeAPI {
             }
 
         } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
@@ -244,7 +239,7 @@ public class SimEdgeAPI {
      * @param args
      */
     public static void mainold(String[] args) {
-        SimEdgeAPI api = new SimEdgeAPI(4, 1024, false);
+        new SimEdgeAPI(4, 1024, false);
 
     }
 
